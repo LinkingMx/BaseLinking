@@ -9,16 +9,35 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             ssr: 'resources/js/ssr.tsx',
-            refresh: true,
+            refresh: [
+                'resources/views/**',
+                'routes/**',
+            ],
         }),
         react(),
         tailwindcss(),
     ],
+    server: {
+        host: '127.0.0.1',
+        port: 5173,
+        strictPort: true,
+        watch: {
+            ignored: [
+                '**/.env',
+                '**/.env.*',
+                '**/node_modules/**',
+                '**/public/**',
+                '**/storage/**',
+                '**/vendor/**'
+            ]
+        },
+    },
     esbuild: {
         jsx: 'automatic',
     },
     resolve: {
         alias: {
+            '@': resolve(__dirname, 'resources/js'),
             'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
         },
     },
