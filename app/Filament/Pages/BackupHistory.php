@@ -4,10 +4,8 @@ namespace App\Filament\Pages;
 
 use App\Services\BackupService;
 use Filament\Actions\Action;
-use Filament\Infolists\Components\Actions as InfolistActions;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Concerns\InteractsWithInfolists;
@@ -16,15 +14,17 @@ use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\ActionSize;
-use Filament\Support\Enums\IconPosition;
 
 class BackupHistory extends Page implements HasInfolists
 {
     use InteractsWithInfolists;
 
     protected static ?string $navigationIcon = 'heroicon-o-clock';
+
     protected static ?string $navigationGroup = 'Respaldos';
+
     protected static ?string $navigationLabel = 'Historial de Backups';
+
     protected static ?int $navigationSort = 3;
 
     protected static string $view = 'filament.pages.backup-history';
@@ -55,7 +55,7 @@ class BackupHistory extends Page implements HasInfolists
                 ->size(ActionSize::Small)
                 ->action(function () {
                     $this->loadBackups();
-                    
+
                     Notification::make()
                         ->title('Lista actualizada')
                         ->body('La lista de backups ha sido actualizada.')
@@ -96,7 +96,7 @@ class BackupHistory extends Page implements HasInfolists
                                     ->label('Último Backup')
                                     ->icon('heroicon-o-clock')
                                     ->getStateUsing(function () {
-                                        return !empty($this->backups) 
+                                        return ! empty($this->backups)
                                             ? $this->backups[0]['date']->diffForHumans()
                                             : 'Sin backups';
                                     })
@@ -137,9 +137,9 @@ class BackupHistory extends Page implements HasInfolists
         }
 
         $entries = [];
-        
+
         foreach ($this->backups as $index => $backup) {
-            $entries[] = Section::make('Backup #' . ($index + 1))
+            $entries[] = Section::make('Backup #'.($index + 1))
                 ->description($backup['name'])
                 ->icon('heroicon-o-archive-box')
                 ->collapsible()
@@ -226,7 +226,7 @@ class BackupHistory extends Page implements HasInfolists
     public function downloadBackup(string $disk, string $path): \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\Response
     {
         $result = $this->getBackupService()->downloadBackup($disk, $path);
-        
+
         if ($result['success']) {
             return response()->streamDownload(function () use ($result) {
                 echo $result['content'];
@@ -239,7 +239,7 @@ class BackupHistory extends Page implements HasInfolists
                 ->body($result['message'])
                 ->danger()
                 ->send();
-                
+
             return response()->noContent();
         }
     }
@@ -252,16 +252,16 @@ class BackupHistory extends Page implements HasInfolists
             ->body('Por favor espera mientras se elimina el archivo.')
             ->warning()
             ->send();
-            
+
         $result = $this->getBackupService()->deleteBackup($disk, $path);
-        
+
         if ($result['success']) {
             Notification::make()
                 ->title('Backup eliminado')
                 ->body('El backup ha sido eliminado correctamente.')
                 ->success()
                 ->send();
-            
+
             // Refresh the backups list
             $this->loadBackups();
         } else {
@@ -281,9 +281,9 @@ class BackupHistory extends Page implements HasInfolists
             ->body('Verificando la integridad del archivo.')
             ->warning()
             ->send();
-            
+
         $result = $this->getBackupService()->validateBackupIntegrity($disk, $path);
-        
+
         if ($result['success']) {
             Notification::make()
                 ->title('Backup válido')
@@ -307,6 +307,6 @@ class BackupHistory extends Page implements HasInfolists
             $bytes /= 1024;
         }
 
-        return round($bytes, $precision) . ' ' . $units[$i];
+        return round($bytes, $precision).' '.$units[$i];
     }
 }

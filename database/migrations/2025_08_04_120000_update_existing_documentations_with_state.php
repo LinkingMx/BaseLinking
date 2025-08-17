@@ -1,15 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use App\Models\Documentation;
+use App\States\ApprovedState;
+use App\States\ArchivedState;
 use App\States\DraftState;
 use App\States\PendingApprovalState;
-use App\States\ApprovedState;
-use App\States\RejectedState;
 use App\States\PublishedState;
-use App\States\ArchivedState;
+use App\States\RejectedState;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -17,9 +15,9 @@ return new class extends Migration
     {
         // Actualizar documentaciones existentes para asignarles estado basado en su campo status
         $documentations = Documentation::whereNull('state')->orWhere('state', '')->get();
-        
+
         foreach ($documentations as $doc) {
-            $stateClass = match($doc->status) {
+            $stateClass = match ($doc->status) {
                 'draft' => DraftState::class,
                 'pending_approval' => PendingApprovalState::class,
                 'approved' => ApprovedState::class,
@@ -28,7 +26,7 @@ return new class extends Migration
                 'archived' => ArchivedState::class,
                 default => DraftState::class
             };
-            
+
             $doc->state = $stateClass;
             $doc->save();
         }

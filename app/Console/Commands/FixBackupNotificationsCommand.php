@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Settings\BackupSettings;
 use App\Models\EmailConfiguration;
+use App\Settings\BackupSettings;
 use Illuminate\Console\Command;
 
 class FixBackupNotificationsCommand extends Command
@@ -37,7 +37,7 @@ class FixBackupNotificationsCommand extends Command
         $changes = false;
 
         // Check if notifications are enabled
-        if (!$settings->notifications_enabled) {
+        if (! $settings->notifications_enabled) {
             $this->warn('Notifications are currently disabled.');
             if ($this->confirm('Would you like to enable notifications?')) {
                 $settings->notifications_enabled = true;
@@ -76,12 +76,13 @@ class FixBackupNotificationsCommand extends Command
                 $this->info("✅ Notification email set to: {$email}");
             } else {
                 $this->error("❌ Invalid email address: {$email}");
+
                 return self::FAILURE;
             }
         }
 
         // Interactive fixes if no options provided
-        if (!$this->hasOptions()) {
+        if (! $this->hasOptions()) {
             $changes = $this->runInteractiveFixes($settings) || $changes;
         }
 
@@ -106,9 +107,9 @@ class FixBackupNotificationsCommand extends Command
      */
     protected function hasOptions(): bool
     {
-        return $this->option('enable-success') || 
-               $this->option('enable-failure') || 
-               $this->option('enable-all') || 
+        return $this->option('enable-success') ||
+               $this->option('enable-failure') ||
+               $this->option('enable-all') ||
                $this->option('email');
     }
 
@@ -120,7 +121,7 @@ class FixBackupNotificationsCommand extends Command
         $changes = false;
 
         // Check notification settings
-        if (!$settings->notify_on_success) {
+        if (! $settings->notify_on_success) {
             $this->warn('Success notifications are disabled. You won\'t receive notifications when backups complete successfully.');
             if ($this->confirm('Enable success notifications?')) {
                 $settings->notify_on_success = true;
@@ -128,7 +129,7 @@ class FixBackupNotificationsCommand extends Command
             }
         }
 
-        if (!$settings->notify_on_failure) {
+        if (! $settings->notify_on_failure) {
             $this->warn('Failure notifications are disabled. You won\'t be notified if backups fail.');
             if ($this->confirm('Enable failure notifications?')) {
                 $settings->notify_on_failure = true;
@@ -152,7 +153,7 @@ class FixBackupNotificationsCommand extends Command
 
         // Check email configuration system
         $activeConfig = EmailConfiguration::getActive();
-        if (!$activeConfig) {
+        if (! $activeConfig) {
             $this->warn('No active email configuration found.');
             $this->info('Please configure email settings in the admin panel under "Email Settings".');
         }
@@ -173,7 +174,7 @@ class FixBackupNotificationsCommand extends Command
                 ['Notifications Enabled', $settings->notifications_enabled ? '✅ Yes' : '❌ No'],
                 ['Notify on Success', $settings->notify_on_success ? '✅ Yes' : '❌ No'],
                 ['Notify on Failure', $settings->notify_on_failure ? '✅ Yes' : '❌ No'],
-                ['Email Recipients', empty($settings->getNotificationEmails()) ? '❌ None' : '✅ ' . implode(', ', $settings->getNotificationEmails())],
+                ['Email Recipients', empty($settings->getNotificationEmails()) ? '❌ None' : '✅ '.implode(', ', $settings->getNotificationEmails())],
                 ['Slack Webhook', empty($settings->slack_webhook_url) ? '❌ Not configured' : '✅ Configured'],
             ]
         );
@@ -187,22 +188,22 @@ class FixBackupNotificationsCommand extends Command
                 $this->warn('📧 No active email configuration found');
             }
         } catch (\Exception $e) {
-            $this->error('📧 Error checking email configuration: ' . $e->getMessage());
+            $this->error('📧 Error checking email configuration: '.$e->getMessage());
         }
 
         // Suggest next steps
         $this->line('');
         $this->info('💡 Suggestions:');
-        if (!$settings->notifications_enabled) {
+        if (! $settings->notifications_enabled) {
             $this->line('  • Enable notifications to receive backup status updates');
         }
-        if (!$settings->notify_on_success && !$settings->notify_on_failure) {
+        if (! $settings->notify_on_success && ! $settings->notify_on_failure) {
             $this->line('  • Enable at least one notification type (success or failure)');
         }
         if (empty($settings->getNotificationEmails())) {
             $this->line('  • Configure notification email addresses');
         }
-        if (!EmailConfiguration::getActive()) {
+        if (! EmailConfiguration::getActive()) {
             $this->line('  • Set up email configuration in the admin panel');
         }
         $this->line('  • Test notifications with: php artisan backup:debug-notifications --test');

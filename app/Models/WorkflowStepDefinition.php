@@ -10,9 +10,13 @@ class WorkflowStepDefinition extends Model
 {
     // Tipos de pasos disponibles
     const TYPE_NOTIFICATION = 'notification';
+
     const TYPE_APPROVAL = 'approval';
+
     const TYPE_ACTION = 'action';
+
     const TYPE_CONDITION = 'condition';
+
     const TYPE_WAIT = 'wait';
 
     protected $fillable = [
@@ -63,7 +67,7 @@ class WorkflowStepDefinition extends Model
      */
     public function shouldExecute(Model $model, array $context = []): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -83,13 +87,13 @@ class WorkflowStepDefinition extends Model
         $conditions = $this->conditions;
 
         // Evaluar condiciones de evento
-        if (isset($conditions['trigger_events']) && !empty($conditions['trigger_events'])) {
+        if (isset($conditions['trigger_events']) && ! empty($conditions['trigger_events'])) {
             $currentEvent = $context['trigger_event'] ?? '';
-            if (!in_array($currentEvent, $conditions['trigger_events'])) {
+            if (! in_array($currentEvent, $conditions['trigger_events'])) {
                 return false;
             }
         }
-        
+
         // Soporte para condición simple de evento (usado en master workflows)
         if (isset($conditions['event'])) {
             $currentEvent = $context['trigger_event'] ?? '';
@@ -97,7 +101,7 @@ class WorkflowStepDefinition extends Model
                 'step_name' => $this->step_name,
                 'expected_event' => $conditions['event'],
                 'current_event' => $currentEvent,
-                'matches' => $currentEvent === $conditions['event']
+                'matches' => $currentEvent === $conditions['event'],
             ]);
             if ($currentEvent !== $conditions['event']) {
                 return false;
@@ -106,7 +110,7 @@ class WorkflowStepDefinition extends Model
 
         // Evaluar condiciones de estado (nuevo sistema Spatie)
         if (isset($conditions['state_conditions'])) {
-            if (!$this->evaluateStateConditions($model, $conditions['state_conditions'], $context)) {
+            if (! $this->evaluateStateConditions($model, $conditions['state_conditions'], $context)) {
                 return false;
             }
         }
@@ -114,7 +118,7 @@ class WorkflowStepDefinition extends Model
         // Evaluar condiciones de campo
         if (isset($conditions['field_conditions'])) {
             foreach ($conditions['field_conditions'] as $condition) {
-                if (!$this->evaluateFieldCondition($model, $condition)) {
+                if (! $this->evaluateFieldCondition($model, $condition)) {
                     return false;
                 }
             }
@@ -123,7 +127,7 @@ class WorkflowStepDefinition extends Model
         // Evaluar condiciones de contexto
         if (isset($conditions['context_conditions'])) {
             foreach ($conditions['context_conditions'] as $condition) {
-                if (!$this->evaluateContextCondition($context, $condition)) {
+                if (! $this->evaluateContextCondition($context, $condition)) {
                     return false;
                 }
             }
@@ -140,7 +144,7 @@ class WorkflowStepDefinition extends Model
         $field = $condition['field'];
         $operator = $condition['operator'];
         $value = $condition['value'] ?? null;
-        
+
         // Manejo especial para el campo de estado Spatie
         if ($field === 'state') {
             $modelValue = $model->state ? $model->state->getStateName() : null;
@@ -156,14 +160,14 @@ class WorkflowStepDefinition extends Model
             '>=' => $modelValue >= $value,
             '<=' => $modelValue <= $value,
             'in' => in_array($modelValue, $this->parseListValue($value)),
-            'not_in' => !in_array($modelValue, $this->parseListValue($value)),
+            'not_in' => ! in_array($modelValue, $this->parseListValue($value)),
             'contains' => str_contains((string) $modelValue, (string) $value),
             'starts_with' => str_starts_with((string) $modelValue, (string) $value),
             'ends_with' => str_ends_with((string) $modelValue, (string) $value),
             'changed' => $model->wasChanged($field),
             'changed_to' => $model->wasChanged($field) && $modelValue == $value,
             'changed_from' => $model->wasChanged($field) && $model->getOriginal($field) == $value,
-            'exists' => !is_null($modelValue) && $modelValue !== '',
+            'exists' => ! is_null($modelValue) && $modelValue !== '',
             'not_exists' => is_null($modelValue) || $modelValue === '',
             default => false,
         };
@@ -175,29 +179,29 @@ class WorkflowStepDefinition extends Model
     protected function evaluateStateConditions(Model $model, array $stateConditions, array $context = []): bool
     {
         // Verificar estado origen (from_state)
-        if (!empty($stateConditions['from_state'])) {
+        if (! empty($stateConditions['from_state'])) {
             $fromStateName = $context['from_state_name'] ?? null;
             if ($fromStateName !== $stateConditions['from_state']) {
                 return false;
             }
         }
-        
+
         // Verificar estado destino (to_state)
-        if (!empty($stateConditions['to_state'])) {
+        if (! empty($stateConditions['to_state'])) {
             $toStateName = $context['to_state_name'] ?? null;
             if ($toStateName !== $stateConditions['to_state']) {
                 return false;
             }
         }
-        
+
         // Verificar transición específica
-        if (!empty($stateConditions['transition_name'])) {
+        if (! empty($stateConditions['transition_name'])) {
             $transitionName = $context['transition_name'] ?? null;
             if ($transitionName !== $stateConditions['transition_name']) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -293,7 +297,7 @@ class WorkflowStepDefinition extends Model
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'type' => 'role'
+                    'type' => 'role',
                 ];
             }
         }
@@ -306,7 +310,7 @@ class WorkflowStepDefinition extends Model
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'type' => 'user'
+                    'type' => 'user',
                 ];
             }
         }
@@ -316,7 +320,7 @@ class WorkflowStepDefinition extends Model
             // Esto se resuelve en tiempo de ejecución
             $approvers[] = [
                 'type' => 'dynamic',
-                'config' => $config['dynamic']
+                'config' => $config['dynamic'],
             ];
         }
 

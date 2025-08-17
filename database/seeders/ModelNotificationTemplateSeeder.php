@@ -27,8 +27,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'model_name' => 'Nombre del tipo de registro (Ej: Usuario, Producto)',
                     'model_title' => 'Título o nombre del registro específico',
                     'action_user' => 'Usuario que creó el registro',
-                    'record_url' => 'URL para ver el registro creado'
-                ]
+                    'record_url' => 'URL para ver el registro creado',
+                ],
             ],
             [
                 'key' => 'model-updated',
@@ -43,8 +43,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'model_name' => 'Nombre del tipo de registro',
                     'model_title' => 'Título del registro actualizado',
                     'changes_summary' => 'Resumen de los cambios realizados',
-                    'action_user' => 'Usuario que realizó la actualización'
-                ]
+                    'action_user' => 'Usuario que realizó la actualización',
+                ],
             ],
             [
                 'key' => 'model-deleted',
@@ -59,10 +59,10 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'model_name' => 'Nombre del tipo de registro eliminado',
                     'model_title' => 'Título del registro eliminado',
                     'action_user' => 'Usuario que eliminó el registro',
-                    'action_date' => 'Fecha y hora de eliminación'
-                ]
+                    'action_date' => 'Fecha y hora de eliminación',
+                ],
             ],
-            
+
             // Templates para Tickets
             [
                 'key' => 'ticket-created',
@@ -77,8 +77,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'ticket_number' => 'Número único del ticket',
                     'ticket_title' => 'Título del ticket',
                     'ticket_priority' => 'Prioridad del ticket',
-                    'created_by' => 'Usuario que creó el ticket'
-                ]
+                    'created_by' => 'Usuario que creó el ticket',
+                ],
             ],
             [
                 'key' => 'ticket-assigned',
@@ -93,8 +93,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'ticket_number' => 'Número del ticket',
                     'assigned_user' => 'Usuario asignado al ticket',
                     'ticket_priority' => 'Prioridad del ticket',
-                    'due_date' => 'Fecha límite del ticket'
-                ]
+                    'due_date' => 'Fecha límite del ticket',
+                ],
             ],
             [
                 'key' => 'ticket-resolved',
@@ -108,8 +108,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                 'variables' => [
                     'ticket_number' => 'Número del ticket resuelto',
                     'assigned_user' => 'Usuario que resolvió el ticket',
-                    'ticket_description' => 'Descripción de la solución'
-                ]
+                    'ticket_description' => 'Descripción de la solución',
+                ],
             ],
 
             // Templates para Pedidos
@@ -126,8 +126,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'order_number' => 'Número del pedido',
                     'customer_name' => 'Nombre del cliente',
                     'order_total' => 'Total del pedido',
-                    'payment_method' => 'Método de pago utilizado'
-                ]
+                    'payment_method' => 'Método de pago utilizado',
+                ],
             ],
             [
                 'key' => 'order-shipped',
@@ -141,8 +141,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                 'variables' => [
                     'order_number' => 'Número del pedido enviado',
                     'delivery_date' => 'Fecha estimada de entrega',
-                    'customer_name' => 'Nombre del cliente'
-                ]
+                    'customer_name' => 'Nombre del cliente',
+                ],
             ],
 
             // Templates para Facturas
@@ -159,8 +159,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'invoice_number' => 'Número de la factura',
                     'invoice_amount' => 'Monto total de la factura',
                     'due_date' => 'Fecha de vencimiento',
-                    'payment_url' => 'URL para realizar el pago'
-                ]
+                    'payment_url' => 'URL para realizar el pago',
+                ],
             ],
             [
                 'key' => 'invoice-overdue',
@@ -174,8 +174,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                 'variables' => [
                     'invoice_number' => 'Número de la factura vencida',
                     'invoice_amount' => 'Monto pendiente',
-                    'due_date' => 'Fecha de vencimiento original'
-                ]
+                    'due_date' => 'Fecha de vencimiento original',
+                ],
             ],
 
             // Template de ejemplo para Bank
@@ -193,8 +193,8 @@ class ModelNotificationTemplateSeeder extends Seeder
                     'model_title' => 'Nombre del banco',
                     'model_id' => 'ID del banco',
                     'action_user' => 'Usuario que registró el banco',
-                    'record_url' => 'URL para ver el banco'
-                ]
+                    'record_url' => 'URL para ver el banco',
+                ],
             ],
         ];
 
@@ -202,7 +202,7 @@ class ModelNotificationTemplateSeeder extends Seeder
             EmailTemplate::updateOrCreate(
                 [
                     'key' => $template['key'],
-                    'language' => $template['language']
+                    'language' => $template['language'],
                 ],
                 $template
             );

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\ApprovalState;
 use App\Models\StateTransition;
+use Illuminate\Database\Seeder;
 
 class StateManagementSeeder extends Seeder
 {
@@ -95,7 +95,7 @@ class StateManagementSeeder extends Seeder
         foreach ($states as $stateData) {
             ApprovalState::firstOrCreate([
                 'model_type' => $stateData['model_type'],
-                'name' => $stateData['name']
+                'name' => $stateData['name'],
             ], $stateData);
         }
 
@@ -189,7 +189,7 @@ class StateManagementSeeder extends Seeder
             StateTransition::firstOrCreate([
                 'from_state_id' => $transitionData['from_state_id'],
                 'to_state_id' => $transitionData['to_state_id'],
-                'name' => $transitionData['name']
+                'name' => $transitionData['name'],
             ], $transitionData);
         }
     }

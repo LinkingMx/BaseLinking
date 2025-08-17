@@ -5,17 +5,17 @@ namespace App\Services;
 use App\Models\ApprovalState;
 use App\Models\StateTransition;
 use App\Models\User;
-use App\Services\AdvancedWorkflowEngine;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Spatie\ModelStates\Exceptions\InvalidConfig;
 use Spatie\ModelStates\HasStates;
 
 class StateTransitionService
 {
     public function __construct(
-        private AdvancedWorkflowEngine $workflowEngine
+        private AdvancedWorkflowEngine $workflowEngine,
+        private StateTransitionLogService $logService,
+        private StateClassRegistry $stateClassRegistry
     ) {}
 
     /**
@@ -24,33 +24,36 @@ class StateTransitionService
     public function getAvailableTransitions(Model $model, ?User $user = null): array
     {
         $user = $user ?? Auth::user();
-        
-        if (!$this->modelHasStates($model)) {
+
+        if (! $this->modelHasStates($model)) {
             return [];
         }
 
         // Verificar si el modelo tiene estado
-        if (!$model->state) {
+        if (! $model->state) {
             // Si no tiene estado, intentar inicializarlo
             $this->initializeModelState($model);
             $model->save();
             $model->refresh();
-            
-            if (!$model->state) {
+
+            if (! $model->state) {
                 return [];
             }
         }
 
         // Obtener estado actual
         $currentStateName = $model->state->getStateName();
-        
-        // Buscar ApprovalState correspondiente
-        $currentApprovalState = ApprovalState::where('model_type', get_class($model))
-            ->where('name', $currentStateName)
-            ->where('is_active', true)
-            ->first();
 
-        if (!$currentApprovalState) {
+        // Buscar ApprovalState correspondiente con cache
+        $cacheKey = 'approval_state_'.md5(get_class($model).'_'.$currentStateName);
+        $currentApprovalState = cache()->remember($cacheKey, now()->addMinutes(30), function () use ($model, $currentStateName) {
+            return ApprovalState::where('model_type', get_class($model))
+                ->where('name', $currentStateName)
+                ->where('is_active', true)
+                ->first();
+        });
+
+        if (! $currentApprovalState) {
             return [];
         }
 
@@ -62,7 +65,7 @@ class StateTransitionService
             ->get();
 
         $availableTransitions = [];
-        
+
         foreach ($transitions as $transition) {
             if ($this->canExecuteTransition($transition, $model, $user)) {
                 $availableTransitions[] = [
@@ -89,47 +92,52 @@ class StateTransitionService
 
         try {
             // Verificar si se puede ejecutar la transición
-            if (!$this->canExecuteTransition($transition, $model, $user)) {
+            if (! $this->canExecuteTransition($transition, $model, $user)) {
                 Log::warning('Transition execution denied', [
                     'transition_id' => $transition->id,
                     'model' => get_class($model),
                     'model_id' => $model->getKey(),
                     'user_id' => $user?->id,
                 ]);
+
                 return false;
             }
 
             // Verificar condiciones
-            if (!$transition->conditionsAreMet($model)) {
+            if (! $transition->conditionsAreMet($model)) {
                 Log::warning('Transition conditions not met', [
                     'transition_id' => $transition->id,
                     'model' => get_class($model),
                     'model_id' => $model->getKey(),
                 ]);
+
                 return false;
             }
 
             // Obtener estado de destino
             $toApprovalState = $transition->toState;
-            $newStateClass = $this->getStateClassFromApprovalState($toApprovalState);
+            $newStateClass = $this->stateClassRegistry->resolveStateClass($toApprovalState);
 
-            if (!$newStateClass) {
+            if (! $newStateClass) {
                 Log::error('Could not determine target state class', [
                     'transition_id' => $transition->id,
                     'to_state_name' => $toApprovalState->name,
+                    'to_state_id' => $toApprovalState->id,
+                    'state_class' => $toApprovalState->state_class,
                 ]);
+
                 return false;
             }
 
             // Ejecutar la transición
             $oldState = $model->state;
             $model->state = new $newStateClass($model);
-            
+
             // También actualizar el campo status si existe para compatibilidad
             if (in_array('status', $model->getFillable())) {
                 $model->status = $toApprovalState->name;
             }
-            
+
             $model->save();
 
             // Registrar la transición
@@ -160,7 +168,7 @@ class StateTransitionService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return false;
         }
     }
@@ -170,44 +178,21 @@ class StateTransitionService
      */
     public function canExecuteTransition(StateTransition $transition, Model $model, ?User $user): bool
     {
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
         // Verificar si la transición puede ser ejecutada por el usuario
-        if (!$transition->canBeExecutedBy($user)) {
+        if (! $transition->canBeExecutedBy($user)) {
             return false;
         }
 
         // Verificar si las condiciones se cumplen
-        if (!$transition->conditionsAreMet($model)) {
+        if (! $transition->conditionsAreMet($model)) {
             return false;
         }
 
         return true;
-    }
-
-    /**
-     * Obtener clase de estado desde ApprovalState
-     */
-    private function getStateClassFromApprovalState(ApprovalState $approvalState): ?string
-    {
-        $modelType = $approvalState->model_type;
-        $stateName = $approvalState->name;
-
-        // Mapeo de nombres de estados a clases
-        $stateMapping = [
-            'App\\Models\\Documentation' => [
-                'draft' => \App\States\DraftState::class,
-                'pending_approval' => \App\States\PendingApprovalState::class,
-                'approved' => \App\States\ApprovedState::class,
-                'rejected' => \App\States\RejectedState::class,
-                'published' => \App\States\PublishedState::class,
-                'archived' => \App\States\ArchivedState::class,
-            ],
-        ];
-
-        return $stateMapping[$modelType][$stateName] ?? null;
     }
 
     /**
@@ -229,20 +214,47 @@ class StateTransitionService
         ?User $user,
         array $data
     ): void {
-        // Aquí puedes implementar logging de transiciones
-        // Por ejemplo, usando Spatie Activity Log
-        if (method_exists($model, 'activity')) {
-            activity()
-                ->performedOn($model)
-                ->causedBy($user)
-                ->withProperties([
-                    'transition_id' => $transition->id,
-                    'transition_name' => $transition->name,
-                    'from_state' => $oldState->getStateName(),
-                    'to_state' => $newState->getStateName(),
-                    'data' => $data,
-                ])
-                ->log("Estado cambiado de '{$oldState->getStateName()}' a '{$newState->getStateName()}'");
+        try {
+            // Usar el servicio de logging centralizado
+            $this->logService->createTransitionLog(
+                $model,
+                $transition,
+                $transition->fromState,
+                $transition->toState,
+                $data['comment'] ?? null,
+                $user,
+                array_merge([
+                    'previous_status' => $model->getOriginal('status') ?? null,
+                    'new_status' => $model->status ?? null,
+                    'transition_triggered_at' => now()->toISOString(),
+                    'old_state_class' => get_class($oldState),
+                    'new_state_class' => get_class($newState),
+                ], $data)
+            );
+
+            // También registrar con Spatie Activity Log para compatibilidad
+            if (method_exists($model, 'activity')) {
+                activity()
+                    ->performedOn($model)
+                    ->causedBy($user)
+                    ->withProperties([
+                        'transition_id' => $transition->id,
+                        'transition_name' => $transition->name,
+                        'from_state' => $oldState->getStateName(),
+                        'to_state' => $newState->getStateName(),
+                        'comment' => $data['comment'] ?? null,
+                        'data' => $data,
+                    ])
+                    ->log("Estado cambiado de '{$oldState->getStateName()}' a '{$newState->getStateName()}'");
+            }
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to create transition log', [
+                'error' => $e->getMessage(),
+                'transition_id' => $transition->id,
+                'model' => get_class($model),
+                'model_id' => $model->getKey(),
+            ]);
         }
     }
 
@@ -257,7 +269,7 @@ class StateTransitionService
         // Obtener estados para contexto
         $fromState = $transition->fromState;
         $toState = $transition->toState;
-        
+
         // Agregar contexto unificado
         $context = array_merge($data, [
             'transition_id' => $transition->id,
@@ -273,10 +285,10 @@ class StateTransitionService
 
         // Disparar eventos unificados (reemplaza eventos redundantes)
         $this->workflowEngine->trigger($model, 'state_changed', $context);
-        
+
         // Disparar evento específico de transición si es necesario
         $this->workflowEngine->trigger($model, "state_transition_{$transition->name}", $context);
-        
+
         // Disparar eventos de estado específicos para compatibilidad
         $this->workflowEngine->trigger($model, "changed_to_state_{$toState->name}", $context);
     }
@@ -290,7 +302,7 @@ class StateTransitionService
         ?User $user,
         array $data
     ): void {
-        if (!$transition->notification_template) {
+        if (! $transition->notification_template) {
             return;
         }
 
@@ -320,22 +332,22 @@ class StateTransitionService
      */
     public function initializeModelState(Model $model): bool
     {
-        if (!$this->modelHasStates($model)) {
+        if (! $this->modelHasStates($model)) {
             return false;
         }
 
         $initialState = $this->getInitialState(get_class($model));
-        if (!$initialState) {
+        if (! $initialState) {
             return false;
         }
 
-        $stateClass = $this->getStateClassFromApprovalState($initialState);
-        if (!$stateClass) {
+        $stateClass = $this->stateClassRegistry->resolveStateClass($initialState);
+        if (! $stateClass) {
             return false;
         }
 
         $model->state = new $stateClass($model);
-        
+
         // También actualizar el campo status si existe
         if (in_array('status', $model->getFillable()) || array_key_exists('status', $model->getAttributes())) {
             $model->status = $initialState->name;

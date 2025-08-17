@@ -7,9 +7,13 @@ use Spatie\LaravelSettings\Settings;
 class GeneralSettings extends Settings
 {
     public ?string $app_name;
+
     public ?string $app_description;
+
     public ?string $app_logo;
+
     public ?string $contact_email;
+
     public ?string $site_url;
 
     public static function group(): string
@@ -33,11 +37,11 @@ class GeneralSettings extends Settings
      */
     public function getAppLogoUrlAttribute(): ?string
     {
-        if (!$this->app_logo) {
+        if (! $this->app_logo) {
             return asset('logo.svg'); // Fallback to default logo
         }
 
-        return asset('storage/' . $this->app_logo);
+        return asset('storage/'.$this->app_logo);
     }
 
     /**

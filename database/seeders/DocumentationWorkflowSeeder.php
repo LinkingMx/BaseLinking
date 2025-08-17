@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\AdvancedWorkflow;
+use App\Models\Documentation;
+use App\Models\EmailTemplate;
 use App\Models\WorkflowStepDefinition;
 use App\Models\WorkflowStepTemplate;
-use App\Models\EmailTemplate;
-use App\Models\Documentation;
 use Illuminate\Database\Seeder;
 
 class DocumentationWorkflowSeeder extends Seeder
@@ -22,11 +22,11 @@ class DocumentationWorkflowSeeder extends Seeder
             'description' => 'Workflow completo para notificaciones, aprobación por 2 usuarios y autorización final por super-admin',
             'target_model' => Documentation::class,
             'trigger_conditions' => [
-                'events' => ['created', 'updated', 'submitted_for_approval', 'approval_level_1_received', 'approval_level_2_received', 'approval_rejected']
+                'events' => ['created', 'updated', 'submitted_for_approval', 'approval_level_1_received', 'approval_level_2_received', 'approval_rejected'],
             ],
             'is_active' => true,
             'version' => 1,
-            'global_variables' => []
+            'global_variables' => [],
         ]);
 
         // PASO 1: Notificación de creación
@@ -42,14 +42,14 @@ class DocumentationWorkflowSeeder extends Seeder
                     [
                         'field' => 'status',
                         'operator' => '=',
-                        'value' => Documentation::STATUS_DRAFT
-                    ]
-                ]
+                        'value' => Documentation::STATUS_DRAFT,
+                    ],
+                ],
             ],
             'step_config' => [
-                'priority' => 'normal'
+                'priority' => 'normal',
             ],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template para notificación de creación
@@ -57,14 +57,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step1->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_CREATOR,
             'recipient_config' => [
-                'dynamic_type' => 'creator'
+                'dynamic_type' => 'creator',
             ],
             'email_template_key' => 'documentation_created',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['created']
-                ]
-            ]
+                    'trigger_events' => ['created'],
+                ],
+            ],
         ]);
 
         // PASO 2: Notificación de edición
@@ -80,14 +80,14 @@ class DocumentationWorkflowSeeder extends Seeder
                     [
                         'field' => 'last_edited_at',
                         'operator' => 'changed',
-                        'value' => null
-                    ]
-                ]
+                        'value' => null,
+                    ],
+                ],
             ],
             'step_config' => [
-                'priority' => 'normal'
+                'priority' => 'normal',
             ],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template para notificación de edición al creador
@@ -95,14 +95,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step2->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_CREATOR,
             'recipient_config' => [
-                'dynamic_type' => 'creator'
+                'dynamic_type' => 'creator',
             ],
             'email_template_key' => 'documentation_edited',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['updated']
-                ]
-            ]
+                    'trigger_events' => ['updated'],
+                ],
+            ],
         ]);
 
         // Template para notificación de edición al editor
@@ -110,14 +110,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step2->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_DYNAMIC,
             'recipient_config' => [
-                'dynamic_type' => 'last_editor'
+                'dynamic_type' => 'last_editor',
             ],
             'email_template_key' => 'documentation_edited',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['updated']
-                ]
-            ]
+                    'trigger_events' => ['updated'],
+                ],
+            ],
         ]);
 
         // PASO 3: Solicitud de Aprobación (Primer Nivel)
@@ -133,26 +133,26 @@ class DocumentationWorkflowSeeder extends Seeder
                     [
                         'field' => 'status',
                         'operator' => '=',
-                        'value' => Documentation::STATUS_PENDING_APPROVAL
+                        'value' => Documentation::STATUS_PENDING_APPROVAL,
                     ],
                     [
                         'field' => 'approval_level',
                         'operator' => '=',
-                        'value' => Documentation::APPROVAL_LEVEL_NONE
-                    ]
-                ]
+                        'value' => Documentation::APPROVAL_LEVEL_NONE,
+                    ],
+                ],
             ],
             'step_config' => [
                 'approval_type' => 'single',
                 'approvers' => [
                     [
                         'type' => 'role',
-                        'role' => 'panel_user'
-                    ]
+                        'role' => 'panel_user',
+                    ],
                 ],
-                'timeout_hours' => 48
+                'timeout_hours' => 48,
             ],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template para solicitud de aprobación nivel 1
@@ -160,14 +160,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step3->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_ROLE,
             'recipient_config' => [
-                'role_names' => ['panel_user']
+                'role_names' => ['panel_user'],
             ],
             'email_template_key' => 'documentation_approval_request_level_1',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['submitted_for_approval']
-                ]
-            ]
+                    'trigger_events' => ['submitted_for_approval'],
+                ],
+            ],
         ]);
 
         // PASO 4: Aprobación Nivel 2
@@ -183,21 +183,21 @@ class DocumentationWorkflowSeeder extends Seeder
                     [
                         'field' => 'approval_level',
                         'operator' => '=',
-                        'value' => Documentation::APPROVAL_LEVEL_FIRST
-                    ]
-                ]
+                        'value' => Documentation::APPROVAL_LEVEL_FIRST,
+                    ],
+                ],
             ],
             'step_config' => [
                 'approval_type' => 'single',
                 'approvers' => [
                     [
                         'type' => 'role',
-                        'role' => 'panel_user'
-                    ]
+                        'role' => 'panel_user',
+                    ],
                 ],
-                'timeout_hours' => 48
+                'timeout_hours' => 48,
             ],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template para solicitud de aprobación nivel 2
@@ -205,14 +205,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step4->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_ROLE,
             'recipient_config' => [
-                'role_names' => ['panel_user']
+                'role_names' => ['panel_user'],
             ],
             'email_template_key' => 'documentation_approval_request_level_2',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['approval_level_1_received']
-                ]
-            ]
+                    'trigger_events' => ['approval_level_1_received'],
+                ],
+            ],
         ]);
 
         // PASO 5: Aprobación Final (Super Admin)
@@ -228,21 +228,21 @@ class DocumentationWorkflowSeeder extends Seeder
                     [
                         'field' => 'approval_level',
                         'operator' => '=',
-                        'value' => Documentation::APPROVAL_LEVEL_SECOND
-                    ]
-                ]
+                        'value' => Documentation::APPROVAL_LEVEL_SECOND,
+                    ],
+                ],
             ],
             'step_config' => [
                 'approval_type' => 'single',
                 'approvers' => [
                     [
                         'type' => 'role',
-                        'role' => 'super_admin'
-                    ]
+                        'role' => 'super_admin',
+                    ],
                 ],
-                'timeout_hours' => 24
+                'timeout_hours' => 24,
             ],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template para solicitud de aprobación final
@@ -250,14 +250,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step5->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_ROLE,
             'recipient_config' => [
-                'role_names' => ['super_admin']
+                'role_names' => ['super_admin'],
             ],
             'email_template_key' => 'documentation_approval_request_final',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['approval_level_2_received']
-                ]
-            ]
+                    'trigger_events' => ['approval_level_2_received'],
+                ],
+            ],
         ]);
 
         // PASO 6: Notificación de Rechazo
@@ -273,15 +273,15 @@ class DocumentationWorkflowSeeder extends Seeder
                     [
                         'field' => 'status',
                         'operator' => '=',
-                        'value' => Documentation::STATUS_REJECTED
-                    ]
-                ]
+                        'value' => Documentation::STATUS_REJECTED,
+                    ],
+                ],
             ],
             'step_config' => [
                 'priority' => 'high',
-                'immediate' => true
+                'immediate' => true,
             ],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template para rechazo
@@ -289,14 +289,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step6->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_CREATOR,
             'recipient_config' => [
-                'dynamic_type' => 'creator'
+                'dynamic_type' => 'creator',
             ],
             'email_template_key' => 'documentation_rejected',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['approval_rejected']
-                ]
-            ]
+                    'trigger_events' => ['approval_rejected'],
+                ],
+            ],
         ]);
 
         // PASO 7: Notificación de Publicación Exitosa
@@ -312,15 +312,15 @@ class DocumentationWorkflowSeeder extends Seeder
                     [
                         'field' => 'status',
                         'operator' => '=',
-                        'value' => Documentation::STATUS_PUBLISHED
-                    ]
-                ]
+                        'value' => Documentation::STATUS_PUBLISHED,
+                    ],
+                ],
             ],
             'step_config' => [
                 'priority' => 'normal',
-                'celebration' => true
+                'celebration' => true,
             ],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template para publicación
@@ -328,14 +328,14 @@ class DocumentationWorkflowSeeder extends Seeder
             'workflow_step_definition_id' => $step7->id,
             'recipient_type' => WorkflowStepTemplate::RECIPIENT_TYPE_CREATOR,
             'recipient_config' => [
-                'dynamic_type' => 'creator'
+                'dynamic_type' => 'creator',
             ],
             'email_template_key' => 'documentation_published',
             'template_variables' => [
                 'send_conditions' => [
-                    'trigger_events' => ['documentation_published']
-                ]
-            ]
+                    'trigger_events' => ['documentation_published'],
+                ],
+            ],
         ]);
 
         // CREAR TEMPLATES DE EMAIL
@@ -343,9 +343,9 @@ class DocumentationWorkflowSeeder extends Seeder
 
         $this->command->info('✅ Workflow de Documentación creado exitosamente');
         $this->command->info("   - Workflow ID: {$workflow->id}");
-        $this->command->info("   - Pasos creados: 7");
-        $this->command->info("   - Templates creados: 8");
-        $this->command->info("   - Templates de email: 7");
+        $this->command->info('   - Pasos creados: 7');
+        $this->command->info('   - Templates creados: 8');
+        $this->command->info('   - Templates de email: 7');
     }
 
     private function createEmailTemplates(): void
@@ -353,12 +353,12 @@ class DocumentationWorkflowSeeder extends Seeder
         // Limpiar templates existentes
         EmailTemplate::whereIn('key', [
             'documentation_created',
-            'documentation_edited', 
+            'documentation_edited',
             'documentation_approval_request_level_1',
             'documentation_approval_request_level_2',
             'documentation_approval_request_final',
             'documentation_rejected',
-            'documentation_published'
+            'documentation_published',
         ])->delete();
 
         // Template 1: Documento Creado
@@ -388,7 +388,7 @@ class DocumentationWorkflowSeeder extends Seeder
             'language' => 'es',
             'category' => 'documentation',
             'description' => 'Confirmación de creación de documento',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template 2: Documento Editado
@@ -414,7 +414,7 @@ class DocumentationWorkflowSeeder extends Seeder
             'language' => 'es',
             'category' => 'documentation',
             'description' => 'Notificación de edición de documento',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template 3: Solicitud Aprobación Nivel 1
@@ -443,7 +443,7 @@ class DocumentationWorkflowSeeder extends Seeder
             'language' => 'es',
             'category' => 'documentation',
             'description' => 'Solicitud de aprobación nivel 1',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template 4: Solicitud Aprobación Nivel 2
@@ -472,7 +472,7 @@ class DocumentationWorkflowSeeder extends Seeder
             'language' => 'es',
             'category' => 'documentation',
             'description' => 'Solicitud de aprobación nivel 2',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template 5: Solicitud Aprobación Final
@@ -501,7 +501,7 @@ class DocumentationWorkflowSeeder extends Seeder
             'language' => 'es',
             'category' => 'documentation',
             'description' => 'Solicitud de aprobación final super-admin',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template 6: Documento Rechazado
@@ -533,7 +533,7 @@ class DocumentationWorkflowSeeder extends Seeder
             'language' => 'es',
             'category' => 'documentation',
             'description' => 'Notificación de documento rechazado',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Template 7: Documento Publicado
@@ -576,7 +576,7 @@ class DocumentationWorkflowSeeder extends Seeder
             'language' => 'es',
             'category' => 'documentation',
             'description' => 'Celebración de documento publicado exitosamente',
-            'is_active' => true
+            'is_active' => true,
         ]);
     }
 }

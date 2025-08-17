@@ -9,6 +9,7 @@ class BackupNotifiable
     use Notifiable;
 
     protected array $emails;
+
     protected ?string $slackWebhookUrl;
 
     public function __construct(array $emails, ?string $slackWebhookUrl = null)

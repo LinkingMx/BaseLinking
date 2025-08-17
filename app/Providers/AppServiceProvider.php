@@ -4,9 +4,9 @@ namespace App\Providers;
 
 use App\Models\EmailConfiguration;
 use App\Settings\LocalizationSettings;
+use BezhanSalleh\FilamentExceptions\Models\Exception as FilamentException;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
-use BezhanSalleh\FilamentExceptions\Models\Exception as FilamentException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -52,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
     protected function applyLocalizationSettings(): void
     {
         // Check if settings table exists to prevent errors during migration
-        if (!Schema::hasTable('settings')) {
+        if (! Schema::hasTable('settings')) {
             return;
         }
 
@@ -99,13 +99,14 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function registerExceptionReporting(): void
     {
-        if (!Schema::hasTable('filament_exceptions')) {
+        if (! Schema::hasTable('filament_exceptions')) {
             return;
         }
 
         // Register the global exception handler
         $this->app->singleton('filament-exceptions', function () {
-            return new class {
+            return new class
+            {
                 public function report(\Throwable $exception): void
                 {
                     try {

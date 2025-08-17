@@ -14,9 +14,13 @@ use Filament\Pages\SettingsPage;
 class AppearanceSettings extends SettingsPage
 {
     protected static ?string $navigationIcon = 'heroicon-o-paint-brush';
+
     protected static ?string $navigationGroup = 'Configuración';
+
     protected static ?string $title = 'Configuración de Apariencia';
+
     protected static ?string $navigationLabel = 'Apariencia';
+
     protected static ?int $navigationSort = 2;
 
     protected static string $settings = Settings::class;

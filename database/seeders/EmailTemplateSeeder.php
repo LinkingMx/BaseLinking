@@ -14,14 +14,14 @@ class EmailTemplateSeeder extends Seeder
     {
         // All email templates have been removed from the system
         // This seeder is kept for future use if email templates are needed again
-        
+
         $templates = [];
 
         foreach ($templates as $template) {
             EmailTemplate::updateOrCreate(
                 [
                     'key' => $template['key'],
-                    'language' => $template['language']
+                    'language' => $template['language'],
                 ],
                 $template
             );

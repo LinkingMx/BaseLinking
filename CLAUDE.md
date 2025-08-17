@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Backend (Laravel/PHP)
+
 - `composer dev` - Start full development environment (Laravel server, queue, logs, and Vite)
 - `composer dev:ssr` - Start development with server-side rendering
 - `composer test` - Run PHP tests with Pest
@@ -14,10 +15,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan filament:upgrade` - Upgrade Filament components (runs automatically after composer updates)
 
 ### Settings & Configuration Management
+
 - `php artisan settings:publish` - Publish settings migrations
 - `php artisan migrate --path=database/settings` - Run settings migrations
 
 ### Backup System Commands
+
 - `php artisan backup:run` - Execute manual backup
 - `php artisan backup:scheduled` - Enhanced scheduled backup with proper email configuration
 - `php artisan backup:debug-notifications [--test]` - Debug backup notification system
@@ -25,11 +28,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan backup:clean` - Clean old backups based on retention policy
 
 ### System Monitoring Commands
+
 - `php artisan pulse:check` - Check Laravel Pulse configuration and status
 - `php artisan pulse:clear` - Clear Pulse data and start fresh monitoring
 - Access monitoring dashboard at `/admin/system-monitoring` or `/pulse`
 
 ### Frontend (React/TypeScript)
+
 - `npm run dev` - Start Vite development server
 - `npm run build` - Build for production
 - `npm run build:ssr` - Build with SSR support
@@ -39,6 +44,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run types` - Type check TypeScript without emitting
 
 ### Single Test Execution
+
 - `php artisan test --filter=TestName` - Run specific test class
 - `vendor/bin/pest tests/Feature/ExampleTest.php` - Run specific test file
 
@@ -47,6 +53,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a Laravel + React SPA using Inertia.js with the following key architectural patterns:
 
 ### Backend Structure
+
 - **Laravel 12** with standard MVC structure
 - **Inertia.js** for seamless SPA experience without API endpoints
 - **Filament v3.3** admin panel at `/admin` route with configurable appearance
@@ -62,6 +69,7 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **Queue system** with database driver
 
 ### Frontend Structure
+
 - **React 19** with TypeScript
 - **Inertia.js React adapter** for SPA routing
 - **Tailwind CSS v4** for styling
@@ -69,28 +77,32 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **Server-side rendering (SSR)** support via `resources/js/ssr.tsx`
 
 ### Key Frontend Patterns
+
 - **Layout system**: Nested layouts in `resources/js/layouts/`
-  - `app-layout.tsx` - Main authenticated layout wrapper
-  - `auth-layout.tsx` - Authentication pages layout
-  - `settings/layout.tsx` - Settings section layout
+    - `app-layout.tsx` - Main authenticated layout wrapper
+    - `auth-layout.tsx` - Authentication pages layout
+    - `settings/layout.tsx` - Settings section layout
 - **Component organization**:
-  - `components/ui/` - Reusable UI components (Radix-based)
-  - `components/` - App-specific components
-  - `hooks/` - Custom React hooks
+    - `components/ui/` - Reusable UI components (Radix-based)
+    - `components/` - App-specific components
+    - `hooks/` - Custom React hooks
 - **Appearance system**: Built-in dark/light mode via `use-appearance` hook
 - **Sidebar state**: Persisted via cookies and managed globally
 
 ### Routing & Navigation
+
 - Laravel routes in `routes/web.php`, `routes/auth.php`, `routes/settings.php`
 - Ziggy integration provides typed route helpers in React components
 - Inertia pages located in `resources/js/pages/`
 
 ### State Management
+
 - Inertia shared data for global state (user, app name, sidebar state)
 - React hooks for component-level state
 - Cookie-based persistence for UI preferences
 
 ### Authentication & Security
+
 - Laravel Breeze-style authentication with Inertia
 - Email verification and password reset flows included
 - Auth pages use dedicated layout system
@@ -100,16 +112,18 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **Laravel Sanctum**: API authentication with personal access tokens
 
 ### Settings Management Architecture
+
 - **Spatie Laravel Settings** for type-safe, database-stored configuration
 - **Settings Classes** in `app/Settings/`:
-  - `GeneralSettings` - App name, logo, contact info
-  - `AppearanceSettings` - Filament theme colors, fonts, logos
-  - `LocalizationSettings` - Language, timezone, date formats
-  - `BackupSettings` - Google Drive and backup configuration
+    - `GeneralSettings` - App name, logo, contact info
+    - `AppearanceSettings` - Filament theme colors, fonts, logos
+    - `LocalizationSettings` - Language, timezone, date formats
+    - `BackupSettings` - Google Drive and backup configuration
 - **Dynamic Configuration**: Settings automatically applied to Filament panel on boot
 - **Helper Functions**: Global settings access via `settings()`, `app_name()`, etc.
 
 ### Email System Architecture
+
 - **EmailConfiguration Resource** - Multiple SMTP/service configurations
 - **EmailTemplate Resource** - Configurable email templates with variable replacement
 - **Mailtrap Integration** - One-click configuration for testing
@@ -117,6 +131,7 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **Service Support**: SMTP, Mailgun, Postmark, Amazon SES, Sendmail
 
 ### Backup System Architecture
+
 - **Spatie Laravel Backup** with Google Drive integration
 - **BackupService** - Centralized backup operations and file management
 - **Google Drive Integration** - Service account authentication, automatic folder creation
@@ -125,6 +140,7 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **Filament Integration** - Complete backup management UI
 
 ### System Monitoring & Logging Architecture
+
 - **Laravel Pulse Integration** for real-time application metrics
 - **Monitoring Widgets**: Server performance, cache hits/misses, queue status, exceptions, slow queries/requests
 - **Pulse Configuration**: Environment variables in `.env` for sampling rates and feature toggles
@@ -134,25 +150,26 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **Log Types**: Resource operations, user access, notifications, model changes with color-coded categorization
 
 ### Filament Admin Panel Navigation Structure
+
 - **"Gestión de Usuarios"**:
-  - User management resource (`/admin/users`)
+    - User management resource (`/admin/users`)
 - **"Comunicaciones"**:
-  - Email configurations (`/admin/email-configurations`)
-  - Email templates (`/admin/email-templates`)
+    - Email configurations (`/admin/email-configurations`)
+    - Email templates (`/admin/email-templates`)
 - **"Configuración"**:
-  - General settings (`/admin/general-settings`)
-  - Appearance settings (`/admin/appearance-settings`)
-  - Localization settings (`/admin/localization-settings`)
+    - General settings (`/admin/general-settings`)
+    - Appearance settings (`/admin/appearance-settings`)
+    - Localization settings (`/admin/localization-settings`)
 - **"Sistema & Backup"**:
-  - Backup configuration (`/admin/backup-configuration`)
-  - Backup manager (`/admin/backup-manager`)
-  - Backup history (`/admin/backup-history`)
-  - Activity logs (`/admin/activity-logs`)
-  - Exceptions (`/admin/exceptions`)
+    - Backup configuration (`/admin/backup-configuration`)
+    - Backup manager (`/admin/backup-manager`)
+    - Backup history (`/admin/backup-history`)
+    - Activity logs (`/admin/activity-logs`)
+    - Exceptions (`/admin/exceptions`)
 - **"Shield"** (Auto-generated):
-  - Roles (`/admin/shield/roles`)
+    - Roles (`/admin/shield/roles`)
 - **User Menu** (Top-right avatar):
-  - My Profile (`/admin/my-profile`) - Filament Breezy integration
+    - My Profile (`/admin/my-profile`) - Filament Breezy integration
 
 ## Important Implementation Notes
 
@@ -178,7 +195,9 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 ## Development Style Guidelines
 
 ### 🎯 **Problem-Solving Approach**
+
 When encountering issues:
+
 1. **✅ Identify Root Cause**: Analyze the specific error and its context
 2. **✅ Provide Clear Summary**: Use structured format with before/after comparisons
 3. **✅ Show Exact Changes**: Include code snippets showing what changed
@@ -186,6 +205,7 @@ When encountering issues:
 5. **✅ Verify Completeness**: Ensure the solution is thorough and tested
 
 ### 📊 **Communication Style**
+
 - **Use Emojis Strategically**: ✅ ❌ 🔧 🎯 📊 for visual clarity
 - **Structured Reporting**: Clear sections with headers and bullet points
 - **Before/After Comparisons**: Show exact changes made
@@ -193,14 +213,18 @@ When encountering issues:
 - **Concise but Complete**: Thorough information in digestible format
 
 ### 🛠️ **Technical Standards**
+
 - **Laravel 12 Compatibility**: Always ensure compatibility with latest Laravel
 - **Filament v3.3 Native Components**: Use only native Filament components, avoid custom builders
 - **Dependency Injection**: Use `app(Service::class)` or method injection, avoid typed properties that cause initialization issues
 - **Error Prevention**: Validate all method signatures and component methods exist
 - **Route Verification**: Always verify route names exist before using them
 - **Icon Validation**: Ensure all heroicons used are valid in the current heroicons set
+- **Line Icons Only**: NEVER use emojis anywhere in code, UI, or documentation - ALWAYS use line icons (heroicons-o-\*)
+- **Icon Validation**: Ensure all heroicons used are valid in the current heroicons set
 
 ### 🎨 **UI/UX Consistency**
+
 - **Native Filament Patterns**: Follow Filament's design system and component patterns
 - **Consistent Navigation**: Use proper route names and navigation structure
 - **Professional Styling**: Clean, consistent interfaces across all pages
@@ -208,16 +232,33 @@ When encountering issues:
 - **Semantic Icons**: Use appropriate heroicons that match the functionality
 
 ### 🔍 **Quality Assurance**
+
 - **Test Critical Paths**: Verify functionality works without errors
 - **Cross-Page Consistency**: Ensure similar pages follow the same patterns
 - **Error Handling**: Implement proper error handling and user feedback
 - **Performance**: Use efficient patterns that don't cause performance issues
 - **Accessibility**: Follow accessibility best practices with proper ARIA labels
 
+### ⚠️ **CRITICAL: Dynamic vs Hardcode Policy**
+
+**ALWAYS ask the user before implementing hardcoded solutions for dynamic functionality:**
+
+- ❌ **Never hardcode** business rules, permissions, state transitions, role mappings, or workflow logic
+- ✅ **Always use database-driven** configuration from existing resources like `approval-states`, `state-transitions`, etc.
+- 🤔 **When in doubt, ASK**: "Should this be configurable/dynamic or is hardcode acceptable?"
+- 📋 **Examples of what to avoid hardcoding**:
+    - Role permissions (`'super_admin'`, `'Travel'`, `'Treasury'`)
+    - State transitions (`'draft' -> 'pending_supervisor'`)
+    - Business logic rules (who can approve what)
+    - Status mappings and labels
+
+**Principle**: If it exists as a resource in the admin panel, it should be read from the database, not hardcoded.
+
 This style ensures professional, consistent, and reliable development across the entire application.
 
 # important-instruction-reminders
+
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.

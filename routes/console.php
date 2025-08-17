@@ -14,9 +14,11 @@ Schedule::command('backup:scheduled')
     ->when(function () {
         try {
             $settings = app(BackupSettings::class);
+
             return $settings->schedule_enabled;
         } catch (\Exception $e) {
-            \Log::error('Error checking backup schedule settings: ' . $e->getMessage());
+            \Log::error('Error checking backup schedule settings: '.$e->getMessage());
+
             return false;
         }
     })
@@ -25,37 +27,37 @@ Schedule::command('backup:scheduled')
         // Check if this execution should actually run based on frequency and time
         try {
             $settings = app(BackupSettings::class);
-            
-            if (!$settings->schedule_enabled) {
+
+            if (! $settings->schedule_enabled) {
                 return;
             }
-            
+
             $now = now();
-            $scheduleTime = $settings->schedule_time ? 
-                \Carbon\Carbon::createFromFormat('H:i', $settings->schedule_time) : 
+            $scheduleTime = $settings->schedule_time ?
+                \Carbon\Carbon::createFromFormat('H:i', $settings->schedule_time) :
                 \Carbon\Carbon::createFromTime(2, 0); // Default to 2 AM
-            
+
             // Only run if current hour matches scheduled hour
             if ($now->hour !== $scheduleTime->hour) {
                 return;
             }
-            
+
             // Check frequency requirements
-            $shouldRun = match($settings->schedule_frequency) {
+            $shouldRun = match ($settings->schedule_frequency) {
                 'daily' => true,
                 'weekly' => $now->dayOfWeek === 1, // Monday
                 'monthly' => $now->day === 1, // First day of month
                 default => false,
             };
-            
-            if (!$shouldRun) {
+
+            if (! $shouldRun) {
                 return;
             }
-            
-            \Log::info('Executing scheduled backup: ' . $settings->schedule_frequency);
-            
+
+            \Log::info('Executing scheduled backup: '.$settings->schedule_frequency);
+
         } catch (\Exception $e) {
-            \Log::error('Error in backup schedule execution: ' . $e->getMessage());
+            \Log::error('Error in backup schedule execution: '.$e->getMessage());
         }
     });
 
@@ -65,6 +67,7 @@ Schedule::command('backup:monitor')
     ->when(function () {
         try {
             $settings = app(BackupSettings::class);
+
             return $settings->notifications_enabled;
         } catch (\Exception $e) {
             return false;
@@ -77,6 +80,7 @@ Schedule::command('backup:clean')
     ->when(function () {
         try {
             $settings = app(BackupSettings::class);
+
             return $settings->delete_old_backups_enabled;
         } catch (\Exception $e) {
             return false;

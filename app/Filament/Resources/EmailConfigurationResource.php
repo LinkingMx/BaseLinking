@@ -3,36 +3,35 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\EmailConfigurationResource\Pages;
-use App\Models\EmailConfiguration;
 use App\Mail\TestEmail;
+use App\Models\EmailConfiguration;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Notifications\Notification;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Mail;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Mail;
 
 class EmailConfigurationResource extends Resource
 {
     protected static ?string $model = EmailConfiguration::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
-    
+
     protected static ?string $navigationLabel = 'Configuración de Email';
-    
+
     protected static ?string $modelLabel = 'Configuración de Email';
-    
+
     protected static ?string $pluralModelLabel = 'Configuraciones de Email';
-    
+
     protected static ?string $navigationGroup = 'Correo';
-    
+
     protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
@@ -48,7 +47,7 @@ class EmailConfigurationResource extends Resource
                                     ->required()
                                     ->maxLength(255)
                                     ->placeholder('Mi configuración SMTP'),
-                                
+
                                 Forms\Components\Toggle::make('is_active')
                                     ->label('Activar esta configuración')
                                     ->helperText('Solo una configuración puede estar activa a la vez')
@@ -61,7 +60,7 @@ class EmailConfigurationResource extends Resource
                                         }
                                     }),
                             ]),
-                        
+
                         Forms\Components\Select::make('driver')
                             ->label('Proveedor de Email')
                             ->required()
@@ -98,7 +97,7 @@ class EmailConfigurationResource extends Resource
                                 ])
                                     ->alignStart(),
                             ]),
-                        
+
                         Forms\Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\TextInput::make('settings.host')
@@ -107,16 +106,17 @@ class EmailConfigurationResource extends Resource
                                     ->placeholder('sandbox.smtp.mailtrap.io')
                                     ->helperText('Para Mailtrap usar: sandbox.smtp.mailtrap.io')
                                     ->rules(['required_if:driver,smtp']),
-                                
+
                                 Forms\Components\Select::make('settings.port')
                                     ->label('Puerto')
                                     ->required()
                                     ->options(function (Get $get) {
                                         $encryption = $get('settings.encryption');
+
                                         return [
-                                            '25' => '25 (Sin encriptación)' . ($encryption === 'none' ? ' - Recomendado' : ''),
-                                            '465' => '465 (SSL)' . ($encryption === 'ssl' ? ' - Recomendado' : ''),
-                                            '587' => '587 (TLS)' . ($encryption === 'tls' ? ' - Recomendado' : ''),
+                                            '25' => '25 (Sin encriptación)'.($encryption === 'none' ? ' - Recomendado' : ''),
+                                            '465' => '465 (SSL)'.($encryption === 'ssl' ? ' - Recomendado' : ''),
+                                            '587' => '587 (TLS)'.($encryption === 'tls' ? ' - Recomendado' : ''),
                                             '2525' => '2525 (Alternativo)',
                                         ];
                                     })
@@ -125,7 +125,7 @@ class EmailConfigurationResource extends Resource
                                     ->live()
                                     ->rules(['required_if:driver,smtp']),
                             ]),
-                        
+
                         Forms\Components\Grid::make(3)
                             ->schema([
                                 Forms\Components\Select::make('settings.encryption')
@@ -147,7 +147,7 @@ class EmailConfigurationResource extends Resource
                                             default => null,
                                         };
                                     }),
-                                
+
                                 Forms\Components\Select::make('settings.auth_method')
                                     ->label('Método de autenticación')
                                     ->options([
@@ -157,7 +157,7 @@ class EmailConfigurationResource extends Resource
                                     ])
                                     ->default('LOGIN')
                                     ->helperText('Método de autenticación SMTP'),
-                                
+
                                 Forms\Components\TextInput::make('settings.username')
                                     ->label('Usuario')
                                     ->required()
@@ -165,7 +165,7 @@ class EmailConfigurationResource extends Resource
                                     ->helperText('Tu username de Mailtrap')
                                     ->rules(['required_if:driver,smtp']),
                             ]),
-                        
+
                         Forms\Components\TextInput::make('settings.password')
                             ->label('Contraseña')
                             ->password()
@@ -185,13 +185,13 @@ class EmailConfigurationResource extends Resource
                             ->required()
                             ->placeholder('mg.example.com')
                             ->rules(['required_if:driver,mailgun']),
-                        
+
                         Forms\Components\TextInput::make('settings.secret')
                             ->label('API Key')
                             ->password()
                             ->dehydrateStateUsing(fn ($state) => filled($state) ? $state : null)
                             ->required(),
-                        
+
                         Forms\Components\TextInput::make('settings.endpoint')
                             ->label('Endpoint')
                             ->default('api.mailgun.net')
@@ -214,13 +214,13 @@ class EmailConfigurationResource extends Resource
                         Forms\Components\TextInput::make('settings.key')
                             ->label('Access Key ID')
                             ->required(),
-                        
+
                         Forms\Components\TextInput::make('settings.secret')
                             ->label('Secret Access Key')
                             ->password()
                             ->dehydrateStateUsing(fn ($state) => filled($state) ? $state : null)
                             ->required(),
-                        
+
                         Forms\Components\Select::make('settings.region')
                             ->label('Región')
                             ->options([
@@ -255,7 +255,7 @@ class EmailConfigurationResource extends Resource
                                     ->email()
                                     ->required()
                                     ->placeholder('noreply@example.com'),
-                                
+
                                 Forms\Components\TextInput::make('settings.from_name')
                                     ->label('Nombre del remitente')
                                     ->required()
@@ -273,7 +273,7 @@ class EmailConfigurationResource extends Resource
                     ->label('Nombre')
                     ->searchable()
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('driver')
                     ->label('Proveedor')
                     ->searchable()
@@ -286,7 +286,7 @@ class EmailConfigurationResource extends Resource
                         'sendmail' => 'danger',
                         default => 'gray',
                     }),
-                    
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Activa')
                     ->boolean()
@@ -294,13 +294,13 @@ class EmailConfigurationResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('gray'),
-                    
+
                 Tables\Columns\TextColumn::make('last_tested_at')
                     ->label('Última prueba')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->placeholder('Nunca'),
-                    
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creada')
                     ->dateTime('d/m/Y H:i')
@@ -317,7 +317,7 @@ class EmailConfigurationResource extends Resource
                         'ses' => 'Amazon SES',
                         'sendmail' => 'Sendmail',
                     ]),
-                    
+
                 TernaryFilter::make('is_active')
                     ->label('Estado')
                     ->trueLabel('Solo activas')
@@ -327,7 +327,7 @@ class EmailConfigurationResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->label('Ver'),
-                    
+
                 Tables\Actions\Action::make('test')
                     ->label('Probar')
                     ->icon('heroicon-o-envelope')
@@ -343,30 +343,30 @@ class EmailConfigurationResource extends Resource
                         try {
                             // Apply configuration temporarily
                             $record->applyConfiguration();
-                            
+
                             // Send test email
                             Mail::to($data['test_email'])->send(new TestEmail(
-                                'Este es un email de prueba enviado desde la configuración "' . $record->name . '". Si recibes este mensaje, la configuración está funcionando correctamente.'
+                                'Este es un email de prueba enviado desde la configuración "'.$record->name.'". Si recibes este mensaje, la configuración está funcionando correctamente.'
                             ));
-                            
+
                             // Mark as tested
                             $record->markAsTested();
-                            
+
                             Notification::make()
                                 ->success()
                                 ->title('Email enviado correctamente')
                                 ->body("El email de prueba ha sido enviado a {$data['test_email']}")
                                 ->send();
-                                
+
                         } catch (\Exception $e) {
                             Notification::make()
                                 ->danger()
                                 ->title('Error al enviar email')
-                                ->body('No se pudo enviar el email de prueba: ' . $e->getMessage())
+                                ->body('No se pudo enviar el email de prueba: '.$e->getMessage())
                                 ->send();
                         }
                     }),
-                    
+
                 Tables\Actions\Action::make('toggle_active')
                     ->label(fn (EmailConfiguration $record): string => $record->is_active ? 'Desactivar' : 'Activar')
                     ->icon(fn (EmailConfiguration $record): string => $record->is_active ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
@@ -374,7 +374,7 @@ class EmailConfigurationResource extends Resource
                     ->action(function (EmailConfiguration $record): void {
                         if ($record->is_active) {
                             $record->update(['is_active' => false]);
-                            
+
                             Notification::make()
                                 ->success()
                                 ->title('Configuración desactivada')
@@ -382,7 +382,7 @@ class EmailConfigurationResource extends Resource
                                 ->send();
                         } else {
                             $record->activate();
-                            
+
                             Notification::make()
                                 ->success()
                                 ->title('Configuración activada')
@@ -390,10 +390,10 @@ class EmailConfigurationResource extends Resource
                                 ->send();
                         }
                     }),
-                    
+
                 Tables\Actions\EditAction::make()
                     ->label('Editar'),
-                    
+
                 Tables\Actions\DeleteAction::make()
                     ->label('Eliminar'),
             ])
@@ -401,7 +401,7 @@ class EmailConfigurationResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->label('Eliminar seleccionadas'),
-                        
+
                     Tables\Actions\BulkAction::make('activate')
                         ->label('Activar seleccionadas')
                         ->icon('heroicon-o-check-circle')
@@ -409,10 +409,10 @@ class EmailConfigurationResource extends Resource
                         ->action(function ($records): void {
                             // Deactivate all first
                             EmailConfiguration::query()->update(['is_active' => false]);
-                            
+
                             // Activate selected (only the first one if multiple)
                             $records->first()->update(['is_active' => true]);
-                            
+
                             Notification::make()
                                 ->success()
                                 ->title('Configuración activada')
@@ -420,14 +420,14 @@ class EmailConfigurationResource extends Resource
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
-                        
+
                     Tables\Actions\BulkAction::make('deactivate')
                         ->label('Desactivar seleccionadas')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->action(function ($records): void {
                             $records->each->update(['is_active' => false]);
-                            
+
                             Notification::make()
                                 ->success()
                                 ->title('Configuraciones desactivadas')

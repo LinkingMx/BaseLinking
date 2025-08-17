@@ -15,7 +15,7 @@ class ListModelVariableMappings extends ListRecords
         return [
             Actions\CreateAction::make()
                 ->label('Crear Variable Manual'),
-                
+
             Actions\Action::make('generator')
                 ->label('Generador de Variables')
                 ->icon('heroicon-o-sparkles')
@@ -24,7 +24,7 @@ class ListModelVariableMappings extends ListRecords
                 ->tooltip('Usa el asistente para crear variables de forma fácil'),
         ];
     }
-    
+
     public function getTitle(): string
     {
         return 'Variables de Modelos';

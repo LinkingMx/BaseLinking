@@ -4,10 +4,8 @@ namespace App\Filament\Pages;
 
 use App\Services\BackupService;
 use Filament\Actions\Action;
-use Filament\Infolists\Components\Actions as InfolistActions;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Concerns\InteractsWithInfolists;
@@ -16,16 +14,20 @@ use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\ActionSize;
-use Filament\Support\Enums\IconPosition;
 use Illuminate\Contracts\Support\Htmlable;
 
 class BackupManager extends Page implements HasInfolists
 {
     use InteractsWithInfolists;
+
     protected static ?string $navigationIcon = 'heroicon-o-circle-stack';
+
     protected static ?string $navigationGroup = 'Respaldos';
+
     protected static ?string $title = 'Gestión de Backups';
+
     protected static ?string $navigationLabel = 'Gestión de Backups';
+
     protected static ?int $navigationSort = 2;
 
     protected static string $view = 'filament.pages.backup-manager';
@@ -65,7 +67,7 @@ class BackupManager extends Page implements HasInfolists
                 ->modalSubmitActionLabel('Ejecutar')
                 ->action(function () {
                     $result = $this->getBackupService()->executeBackup();
-                    
+
                     if ($result['success']) {
                         Notification::make()
                             ->title('Backup ejecutado')
@@ -73,7 +75,7 @@ class BackupManager extends Page implements HasInfolists
                             ->success()
                             ->persistent()
                             ->send();
-                        
+
                         // Refresh statistics
                         $this->loadStatistics();
                     } else {
@@ -96,14 +98,14 @@ class BackupManager extends Page implements HasInfolists
                 ->modalSubmitActionLabel('Limpiar')
                 ->action(function () {
                     $result = $this->getBackupService()->cleanOldBackups();
-                    
+
                     if ($result['success']) {
                         Notification::make()
                             ->title('Limpieza completada')
                             ->body('Los backups antiguos han sido eliminados según la configuración.')
                             ->success()
                             ->send();
-                        
+
                         // Refresh statistics
                         $this->loadStatistics();
                     } else {
@@ -120,7 +122,7 @@ class BackupManager extends Page implements HasInfolists
                 ->size(ActionSize::Small)
                 ->action(function () {
                     $this->loadStatistics();
-                    
+
                     Notification::make()
                         ->title('Estadísticas actualizadas')
                         ->body('Las estadísticas de backup han sido actualizadas.')
@@ -135,7 +137,7 @@ class BackupManager extends Page implements HasInfolists
                 ->size(ActionSize::Small)
                 ->action(function () {
                     $result = $this->getBackupService()->testNotifications();
-                    
+
                     if ($result['success']) {
                         Notification::make()
                             ->title('Notificación de prueba enviada')
@@ -203,7 +205,7 @@ class BackupManager extends Page implements HasInfolists
                                     ->label('Último Backup')
                                     ->icon('heroicon-o-clock')
                                     ->getStateUsing(function () {
-                                        return $this->statistics['latest_backup'] 
+                                        return $this->statistics['latest_backup']
                                             ? $this->statistics['latest_backup']->diffForHumans()
                                             : 'Sin backups';
                                     })
@@ -214,7 +216,7 @@ class BackupManager extends Page implements HasInfolists
                                     ->label('Backup Más Antiguo')
                                     ->icon('heroicon-o-calendar-days')
                                     ->getStateUsing(function () {
-                                        return $this->statistics['oldest_backup'] 
+                                        return $this->statistics['oldest_backup']
                                             ? $this->statistics['oldest_backup']->diffForHumans()
                                             : 'Sin backups';
                                     })
@@ -308,7 +310,7 @@ class BackupManager extends Page implements HasInfolists
     public function refreshStatistics(): void
     {
         $this->loadStatistics();
-        
+
         Notification::make()
             ->title('Estadísticas actualizadas')
             ->body('Las estadísticas de backup han sido actualizadas.')
@@ -324,6 +326,6 @@ class BackupManager extends Page implements HasInfolists
             $bytes /= 1024;
         }
 
-        return round($bytes, $precision) . ' ' . $units[$i];
+        return round($bytes, $precision).' '.$units[$i];
     }
 }

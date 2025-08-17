@@ -23,7 +23,7 @@ class TestEmail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Prueba de Configuración de Email - ' . config('app.name'),
+            subject: 'Prueba de Configuración de Email - '.config('app.name'),
         );
     }
 

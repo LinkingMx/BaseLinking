@@ -1,20 +1,21 @@
 <?php
+
 return [
     'datetime_format' => 'd/m/Y H:i:s',
     'date_format' => 'd/m/Y',
 
     'activity_resource' => \Z3d0X\FilamentLogger\Resources\ActivityResource::class,
-	'scoped_to_tenant' => true,
-	'navigation_sort' => 5,
+    'scoped_to_tenant' => true,
+    'navigation_sort' => 5,
 
     'resources' => [
         'enabled' => true,
         'log_name' => 'Resource',
         'logger' => \Z3d0X\FilamentLogger\Loggers\ResourceLogger::class,
         'color' => 'success',
-		
+
         'exclude' => [
-            //App\Filament\Resources\UserResource::class,
+            // App\Filament\Resources\UserResource::class,
         ],
         'cluster' => null,
         'navigation_group' => 'Sistema & Backup',

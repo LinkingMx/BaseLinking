@@ -7,9 +7,13 @@ use Spatie\LaravelSettings\Settings;
 class LocalizationSettings extends Settings
 {
     public ?string $default_language;
+
     public ?string $timezone;
+
     public ?string $date_format;
+
     public ?string $time_format;
+
     public ?string $currency;
 
     public static function group(): string

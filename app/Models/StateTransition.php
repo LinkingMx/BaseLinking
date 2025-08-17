@@ -37,6 +37,13 @@ class StateTransition extends Model
         'is_active' => 'boolean',
     ];
 
+    protected $appends = [
+        'creator_restriction',
+        'restriction_applies_to_roles',
+        'restriction_except_roles',
+        'creator_field_name',
+    ];
+
     /**
      * Relación con el estado origen
      */
@@ -59,20 +66,20 @@ class StateTransition extends Model
     public function canBeExecutedBy(?User $user = null): bool
     {
         $user = $user ?? auth()->user();
-        
-        if (!$user) {
+
+        if (! $user) {
             return false;
         }
 
         // Verificar permisos
         if ($this->requires_permission && $this->permission_name) {
-            if (!$user->can($this->permission_name)) {
+            if (! $user->can($this->permission_name)) {
                 return false;
             }
         }
 
         // Verificar roles
-        if ($this->requires_role && !empty($this->role_names)) {
+        if ($this->requires_role && ! empty($this->role_names)) {
             $hasRole = false;
             foreach ($this->role_names as $roleName) {
                 if ($user->hasRole($roleName)) {
@@ -80,7 +87,7 @@ class StateTransition extends Model
                     break;
                 }
             }
-            if (!$hasRole) {
+            if (! $hasRole) {
                 return false;
             }
         }
@@ -98,7 +105,7 @@ class StateTransition extends Model
         }
 
         foreach ($this->condition_rules as $rule) {
-            if (!$this->evaluateCondition($model, $rule)) {
+            if (! $this->evaluateCondition($model, $rule)) {
                 return false;
             }
         }
@@ -111,11 +118,78 @@ class StateTransition extends Model
      */
     protected function evaluateCondition(Model $model, array $rule): bool
     {
+        $type = $rule['type'] ?? 'field_comparison';
+
+        // Handle different types of conditions
+        switch ($type) {
+            case 'creator_restriction':
+                return $this->evaluateCreatorRestriction($model, $rule);
+
+            case 'field_comparison':
+            default:
+                return $this->evaluateFieldComparison($model, $rule);
+        }
+    }
+
+    /**
+     * Evaluate creator restriction conditions
+     */
+    protected function evaluateCreatorRestriction(Model $model, array $rule): bool
+    {
+        $restriction = $rule['restriction'] ?? null;
+        $user = auth()->user();
+
+        if (! $user || ! $restriction) {
+            return true;
+        }
+
+        switch ($restriction) {
+            case 'cannot_reverse_after_submission':
+                // Creator cannot reverse transitions once submitted to higher authority
+                $appliesToRoles = $rule['applies_to'] ?? ['User'];
+                $exceptRoles = $rule['except_roles'] ?? ['super_admin'];
+
+                // If user has exception role, allow the transition
+                foreach ($exceptRoles as $role) {
+                    if ($user->hasRole($role)) {
+                        return true;
+                    }
+                }
+
+                // If user has restricted role and is the creator, deny the transition
+                foreach ($appliesToRoles as $role) {
+                    if ($user->hasRole($role)) {
+                        // Check if user is the creator
+                        $creatorField = $rule['creator_field'] ?? 'created_by';
+                        if ($model->{$creatorField} === $user->id) {
+                            return false; // Deny the transition
+                        }
+                    }
+                }
+
+                return true; // Allow if not creator or doesn't have restricted role
+
+            case 'only_approver_can_change':
+                // Only the designated approver can make this transition
+                $approverRoles = $rule['approver_roles'] ?? [];
+
+                return $user->hasAnyRole($approverRoles);
+
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Evaluate field comparison conditions (original logic)
+     */
+    protected function evaluateFieldComparison(Model $model, array $rule): bool
+    {
         $field = $rule['field'] ?? null;
         $operator = $rule['operator'] ?? '=';
         $value = $rule['value'] ?? null;
 
-        if (!$field) {
+        if (! $field) {
             return true;
         }
 
@@ -129,12 +203,12 @@ class StateTransition extends Model
             '>=' => $modelValue >= $value,
             '<=' => $modelValue <= $value,
             'in' => in_array($modelValue, (array) $value),
-            'not_in' => !in_array($modelValue, (array) $value),
+            'not_in' => ! in_array($modelValue, (array) $value),
             'contains' => str_contains((string) $modelValue, (string) $value),
             'starts_with' => str_starts_with((string) $modelValue, (string) $value),
             'ends_with' => str_ends_with((string) $modelValue, (string) $value),
             'is_null' => is_null($modelValue),
-            'is_not_null' => !is_null($modelValue),
+            'is_not_null' => ! is_null($modelValue),
             default => true,
         };
     }
@@ -142,7 +216,7 @@ class StateTransition extends Model
     /**
      * Obtener transiciones disponibles para un estado
      */
-    public static function getAvailableTransitions(ApprovalState $fromState, ?User $user = null): \Illuminate\Database\Eloquent\Collection
+    public static function getAvailableTransitions(ApprovalState $fromState, ?User $user = null, ?Model $model = null): \Illuminate\Database\Eloquent\Collection
     {
         $transitions = static::where('from_state_id', $fromState->id)
             ->where('is_active', true)
@@ -150,8 +224,18 @@ class StateTransition extends Model
             ->orderBy('sort_order')
             ->get();
 
-        return $transitions->filter(function ($transition) use ($user) {
-            return $transition->canBeExecutedBy($user);
+        return $transitions->filter(function ($transition) use ($user, $model) {
+            // Check role/permission requirements
+            if (! $transition->canBeExecutedBy($user)) {
+                return false;
+            }
+
+            // Check condition requirements if model is provided
+            if ($model && ! $transition->conditionsAreMet($model)) {
+                return false;
+            }
+
+            return true;
         });
     }
 
@@ -193,5 +277,113 @@ class StateTransition extends Model
     public function scopeToState($query, int $stateId)
     {
         return $query->where('to_state_id', $stateId);
+    }
+
+    /**
+     * UI Field Accessors - Convert condition_rules JSON to UI fields
+     */
+    public function getCreatorRestrictionAttribute(): string
+    {
+        $creatorRule = $this->getCreatorRestrictionRule();
+
+        return $creatorRule ? ($creatorRule['restriction'] ?? 'none') : 'none';
+    }
+
+    public function getRestrictionAppliesToRolesAttribute(): array
+    {
+        $creatorRule = $this->getCreatorRestrictionRule();
+
+        return $creatorRule ? ($creatorRule['applies_to'] ?? ['User']) : ['User'];
+    }
+
+    public function getRestrictionExceptRolesAttribute(): array
+    {
+        $creatorRule = $this->getCreatorRestrictionRule();
+
+        return $creatorRule ? ($creatorRule['except_roles'] ?? ['super_admin']) : ['super_admin'];
+    }
+
+    public function getCreatorFieldNameAttribute(): string
+    {
+        $creatorRule = $this->getCreatorRestrictionRule();
+
+        return $creatorRule ? ($creatorRule['creator_field'] ?? 'created_by') : 'created_by';
+    }
+
+    /**
+     * UI Field Mutators - Convert UI fields to condition_rules JSON
+     */
+    public function setCreatorRestrictionAttribute($value): void
+    {
+        $this->updateCreatorRestrictionRule('restriction', $value);
+    }
+
+    public function setRestrictionAppliesToRolesAttribute($value): void
+    {
+        $this->updateCreatorRestrictionRule('applies_to', $value);
+    }
+
+    public function setRestrictionExceptRolesAttribute($value): void
+    {
+        $this->updateCreatorRestrictionRule('except_roles', $value);
+    }
+
+    public function setCreatorFieldNameAttribute($value): void
+    {
+        $this->updateCreatorRestrictionRule('creator_field', $value);
+    }
+
+    /**
+     * Helper methods for managing creator restriction rules
+     */
+    private function getCreatorRestrictionRule(): ?array
+    {
+        $rules = $this->condition_rules ?? [];
+
+        foreach ($rules as $rule) {
+            if (($rule['type'] ?? null) === 'creator_restriction') {
+                return $rule;
+            }
+        }
+
+        return null;
+    }
+
+    private function updateCreatorRestrictionRule(string $field, $value): void
+    {
+        $rules = $this->condition_rules ?? [];
+        $creatorRuleIndex = null;
+
+        // Find existing creator restriction rule
+        foreach ($rules as $index => $rule) {
+            if (($rule['type'] ?? null) === 'creator_restriction') {
+                $creatorRuleIndex = $index;
+                break;
+            }
+        }
+
+        // If no creator restriction exists and we're setting a meaningful value
+        if ($creatorRuleIndex === null && $field === 'restriction' && $value !== 'none') {
+            $rules[] = [
+                'type' => 'creator_restriction',
+                'restriction' => $value,
+                'applies_to' => ['User'],
+                'except_roles' => ['super_admin'],
+                'creator_field' => 'created_by',
+                'description' => 'Creator restriction configured from UI',
+            ];
+        }
+        // If creator restriction exists, update it
+        elseif ($creatorRuleIndex !== null) {
+            // If setting restriction to 'none', remove the rule entirely
+            if ($field === 'restriction' && $value === 'none') {
+                unset($rules[$creatorRuleIndex]);
+                $rules = array_values($rules); // Re-index array
+            } else {
+                $rules[$creatorRuleIndex][$field] = $value;
+            }
+        }
+
+        $this->condition_rules = $rules;
     }
 }

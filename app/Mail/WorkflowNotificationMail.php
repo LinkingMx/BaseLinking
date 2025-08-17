@@ -14,8 +14,11 @@ class WorkflowNotificationMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public string $emailSubject;
+
     public string $emailContent;
+
     public string $fromEmail;
+
     public string $fromName;
 
     /**

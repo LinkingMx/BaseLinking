@@ -3,9 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\AdvancedWorkflow;
-use App\Models\WorkflowStepDefinition;
-use App\Models\EmailTemplate;
 use App\Models\Documentation;
+use App\Models\EmailTemplate;
+use App\Models\WorkflowStepDefinition;
 use Illuminate\Database\Seeder;
 
 class DynamicWorkflowExampleSeeder extends Seeder
@@ -33,7 +33,7 @@ class DynamicWorkflowExampleSeeder extends Seeder
             'doc_creation_notification',
             'doc_approval_request',
             'doc_approval_granted',
-            'doc_rejected_notice'
+            'doc_rejected_notice',
         ])->delete();
 
         // Template 1: Notificación de creación
@@ -63,7 +63,7 @@ class DynamicWorkflowExampleSeeder extends Seeder
             'model_type' => Documentation::class,
             'language' => 'es',
             'is_active' => true,
-            'description' => 'Notificación enviada cuando se crea un nuevo documento'
+            'description' => 'Notificación enviada cuando se crea un nuevo documento',
         ]);
 
         // Template 2: Solicitud de aprobación
@@ -96,7 +96,7 @@ class DynamicWorkflowExampleSeeder extends Seeder
             'model_type' => Documentation::class,
             'language' => 'es',
             'is_active' => true,
-            'description' => 'Email enviado a los aprobadores cuando se solicita aprobación'
+            'description' => 'Email enviado a los aprobadores cuando se solicita aprobación',
         ]);
 
         // Template 3: Aprobación concedida
@@ -131,7 +131,7 @@ class DynamicWorkflowExampleSeeder extends Seeder
             'model_type' => Documentation::class,
             'language' => 'es',
             'is_active' => true,
-            'description' => 'Email enviado cuando un documento es aprobado'
+            'description' => 'Email enviado cuando un documento es aprobado',
         ]);
 
         // Template 4: Documento rechazado
@@ -167,7 +167,7 @@ class DynamicWorkflowExampleSeeder extends Seeder
             'model_type' => Documentation::class,
             'language' => 'es',
             'is_active' => true,
-            'description' => 'Email enviado cuando un documento es rechazado'
+            'description' => 'Email enviado cuando un documento es rechazado',
         ]);
 
         $this->command->info('   ✅ Email templates de ejemplo creados');
@@ -189,8 +189,8 @@ class DynamicWorkflowExampleSeeder extends Seeder
                     'submit_for_approval',
                     'approve',
                     'reject',
-                    'publish'
-                ]
+                    'publish',
+                ],
             ],
         ]);
 
@@ -206,26 +206,26 @@ class DynamicWorkflowExampleSeeder extends Seeder
             'step_config' => [
                 // ✨ EMAIL TEMPLATE DINÁMICO - SE PUEDE CAMBIAR EN LA UI
                 'email_template_key' => 'doc_creation_notification',
-                
+
                 // Configuración de destinatarios
                 'recipient_config' => [
                     'type' => 'dynamic',
-                    'dynamic_type' => 'creator'
+                    'dynamic_type' => 'creator',
                 ],
-                
+
                 // Variables adicionales para el template
                 'template_variables' => [
                     'notification_type' => 'creation',
-                    'system_name' => 'Sistema de Gestión Documental'
+                    'system_name' => 'Sistema de Gestión Documental',
                 ],
-                
+
                 'notifications' => [
-                    'priority' => 'normal'
-                ]
+                    'priority' => 'normal',
+                ],
             ],
             'conditions' => [
-                'trigger_events' => ['created']
-            ]
+                'trigger_events' => ['created'],
+            ],
         ]);
 
         // PASO 2: Solicitud de aprobación (dinámico)
@@ -241,26 +241,26 @@ class DynamicWorkflowExampleSeeder extends Seeder
                 // Configuración de aprobadores
                 'approvers' => [
                     'type' => 'roles',
-                    'roles' => ['panel_user'] // Se puede cambiar dinámicamente
+                    'roles' => ['panel_user'], // Se puede cambiar dinámicamente
                 ],
                 'timeout_hours' => 48,
-                
+
                 // ✨ EMAIL TEMPLATES DINÁMICOS - SE PUEDEN CAMBIAR EN LA UI
                 'approval_email_template_key' => 'doc_approval_request',
                 'approval_response_email_template_key' => 'doc_approval_granted',
-                
+
                 // Variables para los templates de aprobación
                 'approval_template_variables' => [
                     'approval_url' => '{{app_url}}/admin/documentations/{{document_id}}/edit',
-                    'approval_deadline' => '{{date_add:2 days}}'
-                ]
+                    'approval_deadline' => '{{date_add:2 days}}',
+                ],
             ],
             'conditions' => [
                 'trigger_events' => ['state_transition_submit_for_approval'],
                 'state_conditions' => [
-                    'to_state' => 'pending_approval'
-                ]
-            ]
+                    'to_state' => 'pending_approval',
+                ],
+            ],
         ]);
 
         // PASO 3: Notificación de rechazo (dinámico)
@@ -275,20 +275,20 @@ class DynamicWorkflowExampleSeeder extends Seeder
             'step_config' => [
                 // ✨ EMAIL TEMPLATE DINÁMICO - SE PUEDE CAMBIAR EN LA UI
                 'email_template_key' => 'doc_rejected_notice',
-                
+
                 'recipient_config' => [
                     'type' => 'dynamic',
-                    'dynamic_type' => 'creator'
+                    'dynamic_type' => 'creator',
                 ],
-                
+
                 'template_variables' => [
                     'action_required' => 'revision',
-                    'next_step' => 'Realizar correcciones y reenviar'
-                ]
+                    'next_step' => 'Realizar correcciones y reenviar',
+                ],
             ],
             'conditions' => [
-                'trigger_events' => ['state_transition_reject']
-            ]
+                'trigger_events' => ['state_transition_reject'],
+            ],
         ]);
 
         $this->command->info("   ✅ Workflow dinámico creado (ID: {$workflow->id})");

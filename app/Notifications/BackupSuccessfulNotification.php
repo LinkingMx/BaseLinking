@@ -2,11 +2,11 @@
 
 namespace App\Notifications;
 
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
-use Carbon\Carbon;
 
 class BackupSuccessfulNotification extends Notification
 {
@@ -22,12 +22,12 @@ class BackupSuccessfulNotification extends Notification
     public function via($notifiable): array
     {
         $channels = ['mail'];
-        
+
         // Add Slack if webhook URL is configured
-        if (!empty($this->backupInfo['slack_webhook_url'])) {
+        if (! empty($this->backupInfo['slack_webhook_url'])) {
             $channels[] = 'slack';
         }
-        
+
         return $channels;
     }
 
@@ -36,7 +36,7 @@ class BackupSuccessfulNotification extends Notification
         $appName = config('app.name', 'SaaS Helpdesk');
         $backupName = $this->backupInfo['backup_name'] ?? 'Backup';
         $timestamp = Carbon::now()->format('d/m/Y H:i:s');
-        
+
         return (new MailMessage)
             ->subject("✅ Backup Exitoso - {$appName}")
             ->greeting('¡Backup Completado!')
@@ -44,7 +44,7 @@ class BackupSuccessfulNotification extends Notification
             ->line("📅 **Fecha:** {$timestamp}")
             ->line("📦 **Nombre:** {$backupName}")
             ->when(isset($this->backupInfo['size']), function ($message) {
-                return $message->line("📊 **Tamaño:** " . $this->formatBytes($this->backupInfo['size']));
+                return $message->line('📊 **Tamaño:** '.$this->formatBytes($this->backupInfo['size']));
             })
             ->when(isset($this->backupInfo['duration']), function ($message) {
                 return $message->line("⏱️ **Duración:** {$this->backupInfo['duration']} segundos");
@@ -66,10 +66,10 @@ class BackupSuccessfulNotification extends Notification
         $appName = config('app.name', 'SaaS Helpdesk');
         $backupName = $this->backupInfo['backup_name'] ?? 'Backup';
         $timestamp = Carbon::now()->format('d/m/Y H:i:s');
-        
+
         $message = (new SlackMessage)
             ->success()
-            ->content("✅ Backup completado exitosamente")
+            ->content('✅ Backup completado exitosamente')
             ->attachment(function ($attachment) use ($appName, $backupName, $timestamp) {
                 $attachment
                     ->title("Backup: {$backupName}")
@@ -79,27 +79,27 @@ class BackupSuccessfulNotification extends Notification
                         'Estado' => '✅ Exitoso',
                     ])
                     ->color('good');
-                    
+
                 if (isset($this->backupInfo['size'])) {
                     $attachment->field('Tamaño', $this->formatBytes($this->backupInfo['size']));
                 }
-                
+
                 if (isset($this->backupInfo['duration'])) {
-                    $attachment->field('Duración', $this->backupInfo['duration'] . ' segundos');
+                    $attachment->field('Duración', $this->backupInfo['duration'].' segundos');
                 }
             });
-            
+
         return $message;
     }
 
     protected function formatBytes(int $bytes, int $precision = 2): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, $precision) . ' ' . $units[$i];
+
+        return round($bytes, $precision).' '.$units[$i];
     }
 }

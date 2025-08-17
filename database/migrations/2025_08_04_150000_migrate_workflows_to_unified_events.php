@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
 use App\Models\AdvancedWorkflow;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -11,11 +11,11 @@ return new class extends Migration
         $eventMapping = [
             // Eventos específicos → Evento unificado
             'published' => 'state_changed',
-            'approved' => 'state_changed', 
+            'approved' => 'state_changed',
             'rejected' => 'state_changed',
             'archived' => 'state_changed',
             'status_changed' => 'state_changed',
-            
+
             // Eventos específicos de estado → Eventos unificados específicos
             'status_changed_to_draft' => 'changed_to_state_draft',
             'status_changed_to_pending_approval' => 'changed_to_state_pending_approval',
@@ -23,23 +23,23 @@ return new class extends Migration
             'status_changed_to_published' => 'changed_to_state_published',
             'status_changed_to_archived' => 'changed_to_state_archived',
         ];
-        
+
         // Actualizar workflows existentes
         $workflows = AdvancedWorkflow::all();
-        
+
         foreach ($workflows as $workflow) {
             $originalEvent = $workflow->trigger_event;
-            
+
             if (isset($eventMapping[$originalEvent])) {
                 $newEvent = $eventMapping[$originalEvent];
-                
+
                 // Actualizar el evento principal
                 $workflow->update(['trigger_event' => $newEvent]);
-                
+
                 // Si era un evento específico que ahora es genérico, agregar condiciones
                 if ($newEvent === 'state_changed' && $originalEvent !== 'state_changed') {
                     $conditions = $workflow->trigger_conditions ?? [];
-                    
+
                     // Agregar condición específica basada en el evento original
                     switch ($originalEvent) {
                         case 'published':
@@ -55,16 +55,16 @@ return new class extends Migration
                             $conditions['to_state_name'] = 'archived';
                             break;
                     }
-                    
-                    if (!empty($conditions)) {
+
+                    if (! empty($conditions)) {
                         $workflow->update(['trigger_conditions' => $conditions]);
                     }
                 }
-                
+
                 echo "✅ Workflow '{$workflow->name}' migrado: {$originalEvent} → {$newEvent}\n";
             }
         }
-        
+
         echo "🎉 Migración de workflows completada\n";
     }
 

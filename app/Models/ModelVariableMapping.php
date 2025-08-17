@@ -8,25 +8,39 @@ class ModelVariableMapping extends Model
 {
     // Tipos de datos soportados
     const DATA_TYPE_STRING = 'string';
+
     const DATA_TYPE_INTEGER = 'integer';
+
     const DATA_TYPE_BOOLEAN = 'boolean';
+
     const DATA_TYPE_DATE = 'date';
+
     const DATA_TYPE_DATETIME = 'datetime';
+
     const DATA_TYPE_ARRAY = 'array';
+
     const DATA_TYPE_OBJECT = 'object';
 
     // Categorías de variables
     const CATEGORY_CUSTOM = 'custom';
+
     const CATEGORY_COMPUTED = 'computed';
+
     const CATEGORY_RELATION = 'relation';
+
     const CATEGORY_AGGREGATED = 'aggregated';
+
     const CATEGORY_CONDITIONAL = 'conditional';
 
     // Tipos de mapeo
     const MAPPING_TYPE_FIELD = 'field';
+
     const MAPPING_TYPE_RELATION_FIELD = 'relation_field';
+
     const MAPPING_TYPE_METHOD = 'method';
+
     const MAPPING_TYPE_COMPUTED = 'computed';
+
     const MAPPING_TYPE_CONDITION = 'condition';
 
     protected $fillable = [
@@ -52,7 +66,7 @@ class ModelVariableMapping extends Model
      */
     public function resolveValue(Model $model)
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return null;
         }
 
@@ -69,7 +83,8 @@ class ModelVariableMapping extends Model
                 default => null,
             };
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning("Error resolving variable {$this->variable_key}: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning("Error resolving variable {$this->variable_key}: ".$e->getMessage());
+
             return null;
         }
     }
@@ -80,11 +95,12 @@ class ModelVariableMapping extends Model
     protected function resolveFieldValue(Model $model, array $config)
     {
         $field = $config['field'] ?? null;
-        if (!$field) {
+        if (! $field) {
             return null;
         }
 
         $value = $model->getAttribute($field);
+
         return $this->formatValue($value);
     }
 
@@ -96,7 +112,7 @@ class ModelVariableMapping extends Model
         $relation = $config['relation'] ?? null;
         $field = $config['field'] ?? null;
 
-        if (!$relation || !$field) {
+        if (! $relation || ! $field) {
             return null;
         }
 
@@ -105,17 +121,18 @@ class ModelVariableMapping extends Model
         $current = $model;
 
         foreach ($relationParts as $relationPart) {
-            if (!method_exists($current, $relationPart)) {
+            if (! method_exists($current, $relationPart)) {
                 return null;
             }
 
             $current = $current->$relationPart;
-            if (!$current) {
+            if (! $current) {
                 return null;
             }
         }
 
         $value = $current->getAttribute($field);
+
         return $this->formatValue($value);
     }
 
@@ -127,11 +144,12 @@ class ModelVariableMapping extends Model
         $method = $config['method'] ?? null;
         $parameters = $config['parameters'] ?? [];
 
-        if (!$method || !method_exists($model, $method)) {
+        if (! $method || ! method_exists($model, $method)) {
             return null;
         }
 
         $value = $model->$method(...$parameters);
+
         return $this->formatValue($value);
     }
 
@@ -166,7 +184,7 @@ class ModelVariableMapping extends Model
             $conditionValue = $condition['value'] ?? null;
             $returnValue = $condition['return'] ?? null;
 
-            if (!$field) {
+            if (! $field) {
                 continue;
             }
 
@@ -177,8 +195,10 @@ class ModelVariableMapping extends Model
                 '>' => $modelValue > $conditionValue,
                 '<' => $modelValue < $conditionValue,
                 'in' => in_array($modelValue, (array) $conditionValue),
-                'not_null' => !is_null($modelValue),
+                'not_null' => ! is_null($modelValue),
                 'is_null' => is_null($modelValue),
+                'contains' => is_string($modelValue) && str_contains(strtolower($modelValue), strtolower($conditionValue)),
+                'not_contains' => is_string($modelValue) && ! str_contains(strtolower($modelValue), strtolower($conditionValue)),
                 default => false,
             };
 
@@ -196,7 +216,7 @@ class ModelVariableMapping extends Model
     protected function computeRelationCount(Model $model, array $config): int
     {
         $relation = $config['relation'] ?? null;
-        if (!$relation || !method_exists($model, $relation)) {
+        if (! $relation || ! method_exists($model, $relation)) {
             return 0;
         }
 
@@ -214,7 +234,7 @@ class ModelVariableMapping extends Model
 
         foreach ($fields as $field) {
             $value = $model->getAttribute($field);
-            if (!is_null($value) && $value !== '') {
+            if (! is_null($value) && $value !== '') {
                 $values[] = $value;
             }
         }
@@ -239,12 +259,12 @@ class ModelVariableMapping extends Model
         $field = $config['field'] ?? null;
         $format = $config['format'] ?? 'd/m/Y H:i';
 
-        if (!$field) {
+        if (! $field) {
             return null;
         }
 
         $date = $model->getAttribute($field);
-        if (!$date) {
+        if (! $date) {
             return null;
         }
 
@@ -265,12 +285,12 @@ class ModelVariableMapping extends Model
     protected function computeAge(Model $model, array $config): ?int
     {
         $field = $config['field'] ?? null;
-        if (!$field) {
+        if (! $field) {
             return null;
         }
 
         $date = $model->getAttribute($field);
-        if (!$date) {
+        if (! $date) {
             return null;
         }
 
@@ -311,7 +331,7 @@ class ModelVariableMapping extends Model
      */
     protected function formatDateValue($value, string $format): ?string
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
@@ -368,7 +388,7 @@ class ModelVariableMapping extends Model
                         'type' => $mapping->data_type,
                         'category' => $mapping->category,
                         'example' => $mapping->example_value,
-                    ]
+                    ],
                 ];
             })
             ->toArray();

@@ -3,17 +3,17 @@
 namespace App\Models;
 
 use App\States\DocumentationState;
-use App\States\DraftState;
 use App\Traits\NotifiesModelChanges;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\ModelStates\HasStates;
 
 class Documentation extends Model
 {
-    use LogsActivity, NotifiesModelChanges, HasStates;
+    use HasStates, LogsActivity, NotifiesModelChanges;
 
     protected $fillable = [
         'title',
@@ -42,15 +42,22 @@ class Documentation extends Model
     // DEPRECATED: Las constantes se mantienen por compatibilidad
     // El nuevo sistema usa ApprovalState dinámicamente
     const STATUS_DRAFT = 'draft';
+
     const STATUS_PENDING_APPROVAL = 'pending_approval';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_PUBLISHED = 'published';
+
     const STATUS_ARCHIVED = 'archived';
-    
+
     // DEPRECATED: El nuevo sistema no usa niveles de aprobación fijos
     const APPROVAL_LEVEL_NONE = 0;
+
     const APPROVAL_LEVEL_FIRST = 1;
+
     const APPROVAL_LEVEL_SECOND = 2;
+
     const APPROVAL_LEVEL_FINAL = 3;
 
     /**
@@ -67,7 +74,7 @@ class Documentation extends Model
 
         // Al crear, inicializar estado
         static::creating(function ($model) {
-            if (!$model->state) {
+            if (! $model->state) {
                 $stateService = app(\App\Services\StateTransitionService::class);
                 $stateService->initializeModelState($model);
             }
@@ -115,6 +122,15 @@ class Documentation extends Model
     }
 
     /**
+     * Relación con los logs de transiciones de estado
+     */
+    public function stateTransitionLogs(): MorphMany
+    {
+        return $this->morphMany(StateTransitionLog::class, 'model', 'model_type', 'model_id')
+            ->orderBy('created_at', 'desc');
+    }
+
+    /**
      * Verificación de estados usando el nuevo sistema
      */
     public function isDraft(): bool
@@ -136,7 +152,7 @@ class Documentation extends Model
     {
         return $this->state?->getStateName() === 'rejected' || $this->status === self::STATUS_REJECTED;
     }
-    
+
     public function isArchived(): bool
     {
         return $this->state?->getStateName() === 'archived' || $this->status === self::STATUS_ARCHIVED;
@@ -169,7 +185,7 @@ class Documentation extends Model
 
     // DEPRECATED: Usar solo el nuevo sistema de estados via StateTransitionService
     // Los métodos legacy se mantienen por compatibilidad pero redirigen al nuevo sistema
-    
+
     /**
      * @deprecated Usar publishDocument() con nuevo sistema de estados
      */
@@ -177,7 +193,7 @@ class Documentation extends Model
     {
         $this->publishDocument(['approved_by' => $approvedBy]);
     }
-    
+
     /**
      * @deprecated Usar archiveDocument() con nuevo sistema de estados
      */
@@ -185,7 +201,7 @@ class Documentation extends Model
     {
         $this->archiveDocument();
     }
-    
+
     /**
      * @deprecated Usar submitForApprovalViaStates() con nuevo sistema de estados
      */
@@ -193,7 +209,7 @@ class Documentation extends Model
     {
         $this->submitForApprovalViaStates(['submitted_by' => $submittedBy]);
     }
-    
+
     /**
      * @deprecated El nuevo sistema maneja aprobaciones dinámicamente
      */
@@ -202,10 +218,10 @@ class Documentation extends Model
         $this->approveViaStates([
             'approved_by' => $approvedBy,
             'comments' => $comments,
-            'approval_level' => $level
+            'approval_level' => $level,
         ]);
     }
-    
+
     /**
      * @deprecated Usar rejectViaStates() con nuevo sistema de estados
      */
@@ -213,10 +229,10 @@ class Documentation extends Model
     {
         $this->rejectViaStates([
             'rejected_by' => $rejectedBy,
-            'rejection_reason' => $reason
+            'rejection_reason' => $reason,
         ]);
     }
-    
+
     /**
      * @deprecated El nuevo sistema maneja esto a través de transiciones
      */
@@ -240,7 +256,7 @@ class Documentation extends Model
                 ->withProperties([
                     'action' => $action,
                     'comments' => $comments,
-                    'legacy_method' => true
+                    'legacy_method' => true,
                 ])
                 ->log("Acción: {$action}");
         }
@@ -273,7 +289,7 @@ class Documentation extends Model
         }
 
         // Fallback al sistema legacy
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_DRAFT => 'Borrador',
             self::STATUS_PENDING_APPROVAL => 'Pendiente de Aprobación',
             self::STATUS_REJECTED => 'Rechazado',
@@ -294,7 +310,7 @@ class Documentation extends Model
         }
 
         // Fallback al sistema legacy
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_DRAFT => 'warning',
             self::STATUS_PENDING_APPROVAL => 'info',
             self::STATUS_REJECTED => 'danger',
@@ -303,7 +319,7 @@ class Documentation extends Model
             default => 'gray',
         };
     }
-    
+
     /**
      * Obtener estado actual como string (unificado)
      */
@@ -311,20 +327,20 @@ class Documentation extends Model
     {
         return $this->state?->getStateName() ?? $this->status ?? 'draft';
     }
-    
+
     /**
      * Verificar si puede hacer una transición específica
      */
     public function canTransitionTo(string $stateName, ?User $user = null): bool
     {
         $availableTransitions = $this->getAvailableStateTransitions($user);
-        
+
         foreach ($availableTransitions as $transition) {
             if ($transition['to_state']->name === $stateName) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -353,6 +369,7 @@ class Documentation extends Model
     public function getAvailableStateTransitions(?User $user = null): array
     {
         $stateService = app(\App\Services\StateTransitionService::class);
+
         return $stateService->getAvailableTransitions($this, $user);
     }
 
@@ -362,11 +379,12 @@ class Documentation extends Model
     public function executeStateTransition(int $transitionId, array $data = [], ?User $user = null): bool
     {
         $transition = \App\Models\StateTransition::find($transitionId);
-        if (!$transition) {
+        if (! $transition) {
             return false;
         }
 
         $stateService = app(\App\Services\StateTransitionService::class);
+
         return $stateService->executeTransition($this, $transition, $user, $data);
     }
 
@@ -404,7 +422,7 @@ class Documentation extends Model
     private function executeTransitionByName(string $transitionName, array $data = []): bool
     {
         $availableTransitions = $this->getAvailableStateTransitions();
-        
+
         foreach ($availableTransitions as $transitionData) {
             if ($transitionData['transition']->name === $transitionName) {
                 return $this->executeStateTransition($transitionData['transition']->id, $data);

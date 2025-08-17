@@ -7,12 +7,19 @@ use Spatie\LaravelSettings\Settings;
 class EmailTemplateSettings extends Settings
 {
     public bool $enabled;
+
     public string $default_language;
+
     public array $available_languages;
+
     public string $default_from_name;
+
     public string $default_from_email;
+
     public bool $auto_wrap_content;
+
     public string $template_wrapper;
+
     public array $global_variables;
 
     public static function group(): string

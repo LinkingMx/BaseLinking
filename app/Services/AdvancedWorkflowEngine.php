@@ -4,12 +4,10 @@ namespace App\Services;
 
 use App\Models\AdvancedWorkflow;
 use App\Models\AdvancedWorkflowExecution;
+use App\Models\User;
 use App\Models\WorkflowStepDefinition;
 use App\Models\WorkflowStepExecutionAdvanced;
 use App\Models\WorkflowStepTemplate;
-use App\Models\User;
-use App\Services\EmailTemplateService;
-use App\Services\ModelIntrospectionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -29,94 +27,95 @@ class AdvancedWorkflowEngine
     public function trigger(Model $model, string $event, array $context = []): array
     {
         $modelClass = get_class($model);
-        
-        Log::info("🚀 AdvancedWorkflowEngine::trigger called", [
+
+        Log::info('🚀 AdvancedWorkflowEngine::trigger called', [
             'model_class' => $modelClass,
             'model_id' => $model->getKey(),
             'event' => $event,
-            'context' => $context
+            'context' => $context,
         ]);
-        
+
         // Buscar el workflow maestro para este modelo
         $masterWorkflow = AdvancedWorkflow::getMasterWorkflowForModel($modelClass);
-        
-        Log::info("🔍 Master workflow search result", [
+
+        Log::info('🔍 Master workflow search result', [
             'master_workflow_found' => $masterWorkflow ? true : false,
             'workflow_id' => $masterWorkflow?->id,
-            'workflow_name' => $masterWorkflow?->name
+            'workflow_name' => $masterWorkflow?->name,
         ]);
-        
-        if (!$masterWorkflow) {
+
+        if (! $masterWorkflow) {
             // Fallback al sistema anterior si no hay workflow maestro
-            Log::info("⚠️ No master workflow found, trying legacy workflows");
+            Log::info('⚠️ No master workflow found, trying legacy workflows');
+
             return $this->triggerLegacyWorkflows($model, $event, $context);
         }
-        
+
         // Enfoque Master Workflow: Evaluar todos los pasos
         return $this->processMasterWorkflow($masterWorkflow, $model, $event, $context);
     }
-    
+
     /**
      * Procesar Master Workflow - Evaluar todos los pasos para el evento actual
      */
     protected function processMasterWorkflow(AdvancedWorkflow $workflow, Model $model, string $event, array $context = []): array
     {
         $executions = [];
-        
+
         try {
             // Obtener todos los pasos activos del workflow
             $steps = $workflow->stepDefinitions()
                 ->where('is_active', true)
                 ->orderBy('step_order')
                 ->get();
-                
+
             Log::info('Processing master workflow', [
                 'workflow' => $workflow->name,
                 'model' => get_class($model),
                 'model_id' => $model->getKey(),
                 'event' => $event,
-                'total_steps' => $steps->count()
+                'total_steps' => $steps->count(),
             ]);
-            
+
             $executedSteps = [];
-            
+
             // Evaluar cada paso para ver si debe ejecutarse con el evento/contexto actual
             foreach ($steps as $step) {
                 if ($step->shouldExecute($model, array_merge($context, ['trigger_event' => $event]))) {
                     Log::info('Step matches conditions, executing', [
                         'step' => $step->step_name,
-                        'step_type' => $step->step_type
+                        'step_type' => $step->step_type,
                     ]);
-                    
+
                     // Crear ejecución para este paso específico
                     $execution = $this->createMasterStepExecution($workflow, $step, $model, $event, $context);
-                    
+
                     if ($execution) {
                         $executions[] = $execution;
                         $executedSteps[] = $step->step_name;
-                        
+
                         // Ejecutar el paso inmediatamente (no secuencial)
                         $this->executeIndependentStep($execution, $step);
                     }
                 }
             }
-            
+
             Log::info('Master workflow processing completed', [
                 'workflow' => $workflow->name,
                 'executed_steps' => $executedSteps,
-                'total_executions' => count($executions)
+                'total_executions' => count($executions),
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Error processing master workflow', [
                 'workflow_id' => $workflow->id,
                 'model' => get_class($model),
                 'model_id' => $model->getKey(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
-        
+
         return $executions;
     }
 
@@ -133,12 +132,12 @@ class AdvancedWorkflowEngine
             try {
                 $execution = $this->createExecution($workflow, $model, $event, $context);
                 $executions[] = $execution;
-                
+
                 // Inicializar y procesar primera etapa
                 if ($execution->initialize()) {
                     $this->processExecution($execution);
                 }
-                
+
             } catch (\Exception $e) {
                 Log::error('Error creating legacy workflow execution', [
                     'workflow_id' => $workflow->id,
@@ -151,7 +150,7 @@ class AdvancedWorkflowEngine
 
         return $executions;
     }
-    
+
     /**
      * Crear ejecución para un paso específico del master workflow
      */
@@ -167,7 +166,7 @@ class AdvancedWorkflowEngine
             $enrichedContext = $this->enrichContext($model, $event, $context);
             $enrichedContext['master_workflow_step_id'] = $step->id;
             $enrichedContext['master_workflow_step_name'] = $step->step_name;
-            
+
             return AdvancedWorkflowExecution::create([
                 'advanced_workflow_id' => $workflow->id,
                 'target_model' => get_class($model),
@@ -182,12 +181,13 @@ class AdvancedWorkflowEngine
             Log::error('Error creating master step execution', [
                 'workflow_id' => $workflow->id,
                 'step_id' => $step->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
-    
+
     /**
      * Ejecutar un paso independiente (no secuencial)
      */
@@ -195,11 +195,12 @@ class AdvancedWorkflowEngine
     {
         try {
             $targetModel = $execution->getTargetModel();
-            if (!$targetModel) {
+            if (! $targetModel) {
                 $execution->markAsFailed('Modelo objetivo no encontrado');
+
                 return false;
             }
-            
+
             // Crear ejecución del paso
             $stepExecution = WorkflowStepExecutionAdvanced::create([
                 'workflow_execution_id' => $execution->id,
@@ -207,44 +208,45 @@ class AdvancedWorkflowEngine
                 'status' => WorkflowStepExecutionAdvanced::STATUS_PENDING,
                 'started_at' => now(),
             ]);
-            
+
             // Marcar como iniciado
             $stepExecution->markAsStarted();
-            
+
             // Ejecutar según el tipo de paso
             $success = $this->executeStepByType($execution, $step, $stepExecution);
-            
+
             if ($success) {
                 // Para pasos independientes, completar inmediatamente
-                if (!$step->requiresManualIntervention()) {
+                if (! $step->requiresManualIntervention()) {
                     $stepExecution->markAsCompleted();
                     $execution->markAsCompleted('Paso independiente completado');
                 }
-                
+
                 Log::info('Independent step executed successfully', [
                     'execution_id' => $execution->id,
                     'step_name' => $step->step_name,
-                    'step_type' => $step->step_type
+                    'step_type' => $step->step_type,
                 ]);
             } else {
                 $stepExecution->markAsFailed('Error ejecutando paso independiente');
                 $execution->markAsFailed('Error en paso independiente');
             }
-            
+
             return $success;
-            
+
         } catch (\Exception $e) {
             Log::error('Error executing independent step', [
                 'execution_id' => $execution->id,
                 'step_id' => $step->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
-            $execution->markAsFailed('Error ejecutando paso: ' . $e->getMessage());
+
+            $execution->markAsFailed('Error ejecutando paso: '.$e->getMessage());
+
             return false;
         }
     }
-    
+
     /**
      * Crear una nueva ejecución de workflow avanzado (método legacy)
      */
@@ -254,10 +256,10 @@ class AdvancedWorkflowEngine
         string $event,
         array $context = []
     ): AdvancedWorkflowExecution {
-        
+
         // Preparar contexto enriquecido
         $enrichedContext = $this->enrichContext($model, $event, $context);
-        
+
         return AdvancedWorkflowExecution::create([
             'advanced_workflow_id' => $workflow->id,
             'target_model' => get_class($model),
@@ -289,7 +291,7 @@ class AdvancedWorkflowEngine
     protected function extractModelData(Model $model): array
     {
         $data = [];
-        
+
         // Campos básicos
         $fillableFields = $model->getFillable();
         foreach ($fillableFields as $field) {
@@ -324,38 +326,39 @@ class AdvancedWorkflowEngine
     public function processExecution(AdvancedWorkflowExecution $execution): bool
     {
         try {
-            if (!$execution->isInProgress()) {
+            if (! $execution->isInProgress()) {
                 return false;
             }
 
             // Procesar pasos en un bucle para evitar recursión infinita
             $maxSteps = 10; // Límite de seguridad
             $stepsProcessed = 0;
-            
+
             while ($execution->isInProgress() && $stepsProcessed < $maxSteps) {
                 $currentStep = $execution->currentStep;
-                if (!$currentStep) {
+                if (! $currentStep) {
                     // No hay más pasos, el workflow está completado
                     return true;
                 }
 
                 $result = $this->processSingleStep($execution, $currentStep);
-                
-                if (!$result) {
+
+                if (! $result) {
                     // Si el paso falló, detener el procesamiento
                     return false;
                 }
-                
+
                 // Si el paso requiere intervención manual, detener aquí
                 if ($currentStep->requiresManualIntervention()) {
                     return true;
                 }
-                
+
                 $stepsProcessed++;
             }
-            
+
             if ($stepsProcessed >= $maxSteps) {
                 $execution->markAsFailed('Se alcanzó el límite máximo de pasos procesados');
+
                 return false;
             }
 
@@ -368,6 +371,7 @@ class AdvancedWorkflowEngine
             ]);
 
             $execution->markAsFailed($e->getMessage());
+
             return false;
         }
     }
@@ -378,9 +382,10 @@ class AdvancedWorkflowEngine
     protected function processSingleStep(AdvancedWorkflowExecution $execution, WorkflowStepDefinition $step): bool
     {
         $targetModel = $execution->getTargetModel();
-        
-        if (!$targetModel) {
+
+        if (! $targetModel) {
             $execution->markAsFailed('Modelo objetivo no encontrado');
+
             return false;
         }
 
@@ -389,7 +394,7 @@ class AdvancedWorkflowEngine
 
         // Obtener o crear ejecución del paso
         $stepExecution = $execution->getCurrentStepExecution();
-        if (!$stepExecution) {
+        if (! $stepExecution) {
             $stepExecution = $execution->createCurrentStepExecution();
         }
 
@@ -401,7 +406,7 @@ class AdvancedWorkflowEngine
 
         if ($result) {
             // Si el paso no requiere intervención manual, completarlo automáticamente
-            if (!$step->requiresManualIntervention()) {
+            if (! $step->requiresManualIntervention()) {
                 $stepExecution->markAsCompleted();
                 $execution->markCurrentStepCompleted();
                 $execution->advanceToNextStep(); // Solo avanzar, no procesar recursivamente
@@ -440,97 +445,101 @@ class AdvancedWorkflowEngine
         try {
             $targetModel = $execution->getTargetModel();
             $context = $execution->getContext();
-            
+
             Log::info('🔔 Executing notification step', [
                 'step_name' => $step->step_name,
                 'step_config' => $step->step_config,
                 'target_model' => get_class($targetModel),
-                'model_id' => $targetModel->getKey()
+                'model_id' => $targetModel->getKey(),
             ]);
-            
+
             $notificationsSent = 0;
-            
+
             // MÉTODO 1: Master workflows con step_config (configuración simple)
             if (isset($step->step_config['email_template_key'])) {
                 Log::info('📧 Using step_config email template method');
-                
+
                 $templateKey = $step->step_config['email_template_key'];
                 $emailTemplate = \App\Models\EmailTemplate::where('key', $templateKey)
                     ->where('is_active', true)
                     ->first();
-                    
-                if (!$emailTemplate) {
+
+                if (! $emailTemplate) {
                     Log::error('❌ Email template not found', ['template_key' => $templateKey]);
                     $stepExecution->markAsFailed("Template de email no encontrado: {$templateKey}");
+
                     return false;
                 }
-                
+
                 // Obtener destinatarios según configuración
                 $recipients = $this->getRecipientsFromStepConfig($step, $targetModel, $context);
-                
+
                 if (empty($recipients)) {
                     Log::warning('⚠️ No recipients found for step config notification');
                     $stepExecution->markAsFailed('No se encontraron destinatarios');
+
                     return false;
                 }
-                
+
                 Log::info('👥 Recipients found', [
                     'count' => count($recipients),
-                    'recipients' => $recipients
+                    'recipients' => $recipients,
                 ]);
-                
+
                 // Preparar variables del modelo para el template
                 $templateVariables = $this->prepareModelVariables($targetModel, $context);
-                
+
                 Log::info('📋 Template variables prepared', [
-                    'variables' => $templateVariables
+                    'variables' => $templateVariables,
                 ]);
-                
+
                 // Procesar template con EmailTemplateService
                 $processedTemplate = $this->emailTemplateService->processTemplate(
-                    $templateKey, 
+                    $templateKey,
                     $templateVariables
                 );
-                
+
                 Log::info('📝 Template processed', [
                     'subject' => $processedTemplate['subject'],
-                    'from_email' => $processedTemplate['from_email']
+                    'from_email' => $processedTemplate['from_email'],
                 ]);
-                
+
                 // Enviar emails
                 $this->sendEmails($recipients, $processedTemplate);
                 $notificationsSent = count($recipients);
-                
+
             } else {
                 // MÉTODO 2: Workflows avanzados con relaciones de templates
                 Log::info('🔗 Using template relations method');
-                
+
                 $templates = $step->templates;
-                
+
                 if ($templates->isEmpty()) {
                     Log::warning('⚠️ No template relations found');
                     $stepExecution->markAsFailed('No se encontraron templates de notificación');
+
                     return false;
                 }
 
                 foreach ($templates as $template) {
-                    if (!$template->shouldSend($targetModel, $context)) {
+                    if (! $template->shouldSend($targetModel, $context)) {
                         continue;
                     }
-                    
+
                     $recipients = $template->getRecipients($targetModel, $context);
-                    
+
                     if (empty($recipients)) {
                         Log::warning('No recipients found for template', [
                             'template_id' => $template->id,
                             'step_id' => $step->id,
                         ]);
+
                         continue;
                     }
-                    
+
                     // Preparar variables para el template
                     $variables = $this->prepareStepVariables($execution, $step, $template);
-                    
+
                     // Enviar notificaciones
                     $this->sendNotifications($template, $recipients, $variables, $stepExecution);
                     $notificationsSent += count($recipients);
@@ -540,21 +549,24 @@ class AdvancedWorkflowEngine
             if ($notificationsSent > 0) {
                 $stepExecution->setOutputData('notifications_sent_count', $notificationsSent);
                 Log::info('✅ Notification step completed successfully', [
-                    'notifications_sent' => $notificationsSent
+                    'notifications_sent' => $notificationsSent,
                 ]);
+
                 return true;
             } else {
                 Log::warning('⚠️ No notifications were sent');
                 $stepExecution->markAsFailed('No se pudieron enviar notificaciones');
+
                 return false;
             }
 
         } catch (\Exception $e) {
             Log::error('❌ Error in notification step', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            $stepExecution->markAsFailed('Error enviando notificaciones: ' . $e->getMessage());
+            $stepExecution->markAsFailed('Error enviando notificaciones: '.$e->getMessage());
+
             return false;
         }
     }
@@ -569,34 +581,37 @@ class AdvancedWorkflowEngine
     ): bool {
         try {
             $approvers = $step->getApprovers();
-            
+
             if (empty($approvers)) {
                 $stepExecution->markAsFailed('No se encontraron aprobadores configurados');
+
                 return false;
             }
 
             // Resolver aprobadores dinámicos
             $resolvedApprovers = $this->resolveApprovers($approvers, $execution->getTargetModel());
-            
+
             if (empty($resolvedApprovers)) {
                 $stepExecution->markAsFailed('No se pudieron resolver los aprobadores');
+
                 return false;
             }
 
             // Asignar primer aprobador (o todos según configuración)
             $firstApprover = $resolvedApprovers[0];
             $stepExecution->update(['assigned_to' => $firstApprover['id']]);
-            
+
             // Establecer fecha límite si está configurada
             $stepExecution->setDueDate();
-            
+
             // Enviar notificaciones de aprobación
             $this->sendApprovalNotifications($execution, $step, $stepExecution, $resolvedApprovers);
-            
+
             return true;
 
         } catch (\Exception $e) {
-            $stepExecution->markAsFailed('Error procesando aprobación: ' . $e->getMessage());
+            $stepExecution->markAsFailed('Error procesando aprobación: '.$e->getMessage());
+
             return false;
         }
     }
@@ -612,19 +627,22 @@ class AdvancedWorkflowEngine
         try {
             $actionConfig = $step->getActionConfig();
             $targetModel = $execution->getTargetModel();
-            
+
             $result = $this->executeAction($targetModel, $actionConfig, $execution);
-            
+
             if ($result) {
                 $stepExecution->setOutputData('action_result', 'success');
+
                 return true;
             } else {
                 $stepExecution->markAsFailed('Error ejecutando la acción');
+
                 return false;
             }
 
         } catch (\Exception $e) {
-            $stepExecution->markAsFailed('Error en paso de acción: ' . $e->getMessage());
+            $stepExecution->markAsFailed('Error en paso de acción: '.$e->getMessage());
+
             return false;
         }
     }
@@ -640,6 +658,7 @@ class AdvancedWorkflowEngine
         // Los pasos de condición se evalúan en shouldExecute()
         // Si llegamos aquí es que la condición se cumplió
         $stepExecution->setOutputData('condition_result', 'passed');
+
         return true;
     }
 
@@ -653,27 +672,31 @@ class AdvancedWorkflowEngine
     ): bool {
         $waitConfig = $step->step_config['wait'] ?? [];
         $waitType = $waitConfig['type'] ?? 'time';
-        
+
         switch ($waitType) {
             case 'time':
                 $waitMinutes = $waitConfig['minutes'] ?? 60;
                 $stepExecution->setDueDate(now()->addMinutes($waitMinutes));
                 $stepExecution->setOutputData('wait_until', now()->addMinutes($waitMinutes)->toISOString());
+
                 // Este paso se completará automáticamente cuando se procesen los timeouts
                 return true;
-                
+
             case 'condition':
                 // Esperar hasta que se cumpla una condición específica
                 $stepExecution->setOutputData('waiting_for_condition', $waitConfig['condition']);
+
                 return true;
-                
+
             case 'manual':
                 // Esperar intervención manual
                 $stepExecution->setOutputData('waiting_for_manual_trigger', true);
+
                 return true;
-                
+
             default:
-                $stepExecution->markAsFailed('Tipo de espera no válido: ' . $waitType);
+                $stepExecution->markAsFailed('Tipo de espera no válido: '.$waitType);
+
                 return false;
         }
     }
@@ -684,7 +707,7 @@ class AdvancedWorkflowEngine
     protected function resolveApprovers(array $approvers, ?Model $targetModel): array
     {
         $resolved = [];
-        
+
         foreach ($approvers as $approver) {
             if ($approver['type'] === 'dynamic' && $targetModel) {
                 $dynamicApprovers = $this->resolveDynamicApprovers($approver['config'], $targetModel);
@@ -693,7 +716,7 @@ class AdvancedWorkflowEngine
                 $resolved[] = $approver;
             }
         }
-        
+
         return array_unique($resolved, SORT_REGULAR);
     }
 
@@ -704,7 +727,7 @@ class AdvancedWorkflowEngine
     {
         $approvers = [];
         $dynamicType = $config['type'] ?? '';
-        
+
         switch ($dynamicType) {
             case 'creator_manager':
                 if (method_exists($model, 'creator') && $model->creator) {
@@ -714,12 +737,12 @@ class AdvancedWorkflowEngine
                             'id' => $creator->manager->id,
                             'name' => $creator->manager->name,
                             'email' => $creator->manager->email,
-                            'type' => 'dynamic'
+                            'type' => 'dynamic',
                         ];
                     }
                 }
                 break;
-                
+
             case 'department_head':
                 if (method_exists($model, 'creator') && $model->creator) {
                     $creator = $model->creator;
@@ -730,13 +753,13 @@ class AdvancedWorkflowEngine
                                 'id' => $department->head->id,
                                 'name' => $department->head->name,
                                 'email' => $department->head->email,
-                                'type' => 'dynamic'
+                                'type' => 'dynamic',
                             ];
                         }
                     }
                 }
                 break;
-                
+
             case 'role_in_department':
                 // Usuarios con rol específico en el departamento del creador
                 $roleName = $config['role'] ?? '';
@@ -745,26 +768,26 @@ class AdvancedWorkflowEngine
                     if (method_exists($creator, 'department') && $creator->department) {
                         $department = $creator->department;
                         $users = User::whereHas('roles', function ($query) use ($roleName) {
-                                $query->where('name', $roleName);
-                            })
+                            $query->where('name', $roleName);
+                        })
                             ->whereHas('department', function ($query) use ($department) {
                                 $query->where('id', $department->id);
                             })
                             ->get();
-                            
+
                         foreach ($users as $user) {
                             $approvers[] = [
                                 'id' => $user->id,
                                 'name' => $user->name,
                                 'email' => $user->email,
-                                'type' => 'dynamic'
+                                'type' => 'dynamic',
                             ];
                         }
                     }
                 }
                 break;
         }
-        
+
         return $approvers;
     }
 
@@ -783,11 +806,11 @@ class AdvancedWorkflowEngine
                 foreach ($approvers as $approver) {
                     $recipients[] = $approver['email'];
                 }
-                
+
                 $variables = $this->prepareStepVariables($execution, $step, $template);
                 $variables['approvers'] = $approvers;
                 $variables['assigned_approver'] = $approvers[0] ?? null;
-                
+
                 $this->sendNotifications($template, $recipients, $variables, $stepExecution);
             }
         }
@@ -805,13 +828,13 @@ class AdvancedWorkflowEngine
     ): array {
         $targetModel = $execution->getTargetModel();
         $workflow = $execution->workflow;
-        
+
         $baseVariables = [
             // Variables del workflow
             'workflow_name' => $workflow->name,
             'workflow_description' => $workflow->description,
             'workflow_version' => $workflow->version,
-            
+
             // Variables del paso
             'step_name' => $step->step_name,
             'step_description' => $step->description ?? '',
@@ -819,23 +842,23 @@ class AdvancedWorkflowEngine
             'step_order' => $step->step_order,
             'current_step_order' => $execution->current_step_order,
             'total_steps' => $workflow->stepDefinitions()->active()->count(),
-            
+
             // Variables de la ejecución
             'execution_id' => $execution->id,
             'execution_status' => $execution->getStatusDescription(),
-            'execution_progress' => $execution->getProgress() . '%',
+            'execution_progress' => $execution->getProgress().'%',
             'completed_steps' => $execution->getCompletedStepsCount(),
-            
+
             // Variables del modelo objetivo
             'target_model' => class_basename($execution->target_model),
             'target_title' => $execution->getTargetTitle(),
             'target_id' => $execution->target_id,
-            
+
             // Variables de contexto
             'trigger_event' => $execution->getContext('trigger_event'),
             'trigger_user_name' => $execution->getContext('trigger_user_name'),
             'triggered_at' => $execution->getContext('triggered_at'),
-            
+
             // Variables del usuario iniciador
             'initiator_name' => $execution->initiator?->name ?? 'Sistema',
             'initiator_email' => $execution->initiator?->email ?? '',
@@ -863,7 +886,7 @@ class AdvancedWorkflowEngine
     {
         $variables = [];
         $modelName = strtolower(class_basename($model));
-        
+
         // Variables específicas para documentación
         if ($model instanceof \App\Models\Documentation) {
             $variables = array_merge($variables, [
@@ -899,7 +922,7 @@ class AdvancedWorkflowEngine
     protected function executeAction(Model $targetModel, array $actionConfig, AdvancedWorkflowExecution $execution): bool
     {
         $actionType = $actionConfig['type'] ?? null;
-        
+
         return match ($actionType) {
             'update_model' => $this->executeUpdateModelAction($targetModel, $actionConfig),
             'send_email' => $this->executeSendEmailAction($actionConfig, $execution),
@@ -916,27 +939,28 @@ class AdvancedWorkflowEngine
     {
         try {
             $updates = $actionConfig['updates'] ?? [];
-            
+
             if (empty($updates)) {
                 return false;
             }
-            
+
             $targetModel->update($updates);
-            
+
             Log::info('Model updated by workflow action', [
                 'model' => get_class($targetModel),
                 'model_id' => $targetModel->getKey(),
-                'updates' => $updates
+                'updates' => $updates,
             ]);
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
             Log::error('Error updating model in workflow action', [
                 'error' => $e->getMessage(),
                 'model' => get_class($targetModel),
-                'model_id' => $targetModel->getKey()
+                'model_id' => $targetModel->getKey(),
             ]);
+
             return false;
         }
     }
@@ -949,25 +973,27 @@ class AdvancedWorkflowEngine
         try {
             $templateKey = $actionConfig['template_key'] ?? null;
             $recipients = $actionConfig['recipients'] ?? [];
-            
-            if (!$templateKey || empty($recipients)) {
+
+            if (! $templateKey || empty($recipients)) {
                 return false;
             }
-            
-            if (!$this->emailTemplateService->templateExists($templateKey)) {
+
+            if (! $this->emailTemplateService->templateExists($templateKey)) {
                 Log::warning("Email template not found for action: {$templateKey}");
+
                 return false;
             }
-            
+
             $variables = $actionConfig['variables'] ?? [];
             $processedTemplate = $this->emailTemplateService->processTemplate($templateKey, $variables);
-            
+
             $this->sendEmails($recipients, $processedTemplate);
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
             Log::error('Error sending email in workflow action', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -980,22 +1006,23 @@ class AdvancedWorkflowEngine
         try {
             $modelClass = $actionConfig['model'] ?? null;
             $data = $actionConfig['data'] ?? [];
-            
-            if (!$modelClass || empty($data) || !class_exists($modelClass)) {
+
+            if (! $modelClass || empty($data) || ! class_exists($modelClass)) {
                 return false;
             }
-            
+
             $modelClass::create($data);
-            
+
             Log::info('Record created by workflow action', [
                 'model' => $modelClass,
-                'data' => $data
+                'data' => $data,
             ]);
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
             Log::error('Error creating record in workflow action', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -1008,24 +1035,25 @@ class AdvancedWorkflowEngine
         try {
             $method = $actionConfig['method'] ?? null;
             $parameters = $actionConfig['parameters'] ?? [];
-            
-            if (!$method || !method_exists($targetModel, $method)) {
+
+            if (! $method || ! method_exists($targetModel, $method)) {
                 return false;
             }
-            
+
             $result = $targetModel->$method(...$parameters);
-            
+
             Log::info('Method called by workflow action', [
                 'model' => get_class($targetModel),
                 'model_id' => $targetModel->getKey(),
                 'method' => $method,
-                'result' => $result
+                'result' => $result,
             ]);
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
             Log::error('Error calling method in workflow action', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -1038,9 +1066,9 @@ class AdvancedWorkflowEngine
         Log::info('Custom workflow action executed', [
             'action_config' => $actionConfig,
             'target_model' => get_class($targetModel),
-            'execution_id' => $execution->id
+            'execution_id' => $execution->id,
         ]);
-        
+
         return true;
     }
 
@@ -1054,30 +1082,31 @@ class AdvancedWorkflowEngine
         WorkflowStepExecutionAdvanced $stepExecution
     ): void {
         try {
-            if (!$this->emailTemplateService->templateExists($template->email_template_key)) {
+            if (! $this->emailTemplateService->templateExists($template->email_template_key)) {
                 Log::warning("Email template not found: {$template->email_template_key}");
+
                 return;
             }
-            
+
             $processedTemplate = $this->emailTemplateService->processTemplate(
                 $template->email_template_key,
                 $variables
             );
-            
+
             $this->sendEmails($recipients, $processedTemplate);
-            
+
             // Registrar notificaciones enviadas
             foreach ($recipients as $recipient) {
                 $stepExecution->addNotificationSent($recipient, $template->email_template_key, [
                     'template_id' => $template->id,
-                    'variables_count' => count($variables)
+                    'variables_count' => count($variables),
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Error sending workflow notifications', [
                 'template_id' => $template->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -1096,31 +1125,32 @@ class AdvancedWorkflowEngine
 
         if (empty($recipients)) {
             Log::warning('⚠️ No recipients to send emails to');
+
             return;
         }
 
         $content = $this->emailTemplateService->getWrappedContent($processedTemplate['content']);
-        
+
         Log::info('📝 Email content prepared', [
             'content_length' => strlen($content),
-            'wrapped_content_preview' => substr($content, 0, 200) . '...'
+            'wrapped_content_preview' => substr($content, 0, 200).'...',
         ]);
 
         foreach ($recipients as $email) {
             Log::info("📤 Queueing email to: {$email}");
-            
+
             try {
                 // Debug: Log template values
-                Log::info("🔍 Debug template values", [
+                Log::info('🔍 Debug template values', [
                     'from_email' => $processedTemplate['from_email'] ?? 'NOT_SET',
                     'from_name' => $processedTemplate['from_name'] ?? 'NOT_SET',
                     'from_email_type' => gettype($processedTemplate['from_email'] ?? null),
                     'from_name_type' => gettype($processedTemplate['from_name'] ?? null),
                 ]);
-                
+
                 $fromEmail = is_array($processedTemplate['from_email'] ?? null) ? 'noreply@saashelpdesk.test' : ($processedTemplate['from_email'] ?? 'noreply@saashelpdesk.test');
                 $fromName = is_array($processedTemplate['from_name'] ?? null) ? 'Sistema' : ($processedTemplate['from_name'] ?? 'Sistema');
-                
+
                 // Temporal: Usar envío directo en lugar de queue para evitar errores de serialización
                 Mail::send([], [], function ($message) use ($email, $processedTemplate, $content, $fromEmail, $fromName) {
                     $message->to($email)
@@ -1128,7 +1158,7 @@ class AdvancedWorkflowEngine
                         ->html($content)
                         ->from($fromEmail, $fromName);
                 });
-                
+
                 // TODO: Investigar problema de serialización en WorkflowNotificationMail
                 // $mailable = new \App\Mail\WorkflowNotificationMail(
                 //     $processedTemplate['subject'],
@@ -1137,18 +1167,18 @@ class AdvancedWorkflowEngine
                 //     $fromName
                 // );
                 // Mail::to($email)->queue($mailable);
-                
+
                 Log::info("✅ Email queued successfully to: {$email}");
-                
+
             } catch (\Exception $e) {
                 Log::error('❌ Failed to queue workflow email', [
                     'recipient' => $email,
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }
-        
+
         Log::info('📧 sendEmails() completed');
     }
 
@@ -1157,14 +1187,14 @@ class AdvancedWorkflowEngine
      */
     public function approve(AdvancedWorkflowExecution $execution, ?string $comments = null): bool
     {
-        if (!$execution->isInProgress()) {
+        if (! $execution->isInProgress()) {
             return false;
         }
 
         try {
             $currentStepExecution = $execution->getCurrentStepExecution();
-            
-            if (!$currentStepExecution || !$currentStepExecution->requiresUserAction()) {
+
+            if (! $currentStepExecution || ! $currentStepExecution->requiresUserAction()) {
                 return false;
             }
 
@@ -1197,13 +1227,13 @@ class AdvancedWorkflowEngine
      */
     public function reject(AdvancedWorkflowExecution $execution, string $reason): bool
     {
-        if (!$execution->isInProgress()) {
+        if (! $execution->isInProgress()) {
             return false;
         }
 
         try {
             $currentStepExecution = $execution->getCurrentStepExecution();
-            
+
             if ($currentStepExecution) {
                 $currentStepExecution->markAsFailed($reason, Auth::id());
             }
@@ -1239,7 +1269,7 @@ class AdvancedWorkflowEngine
         foreach ($overdueSteps as $stepExecution) {
             try {
                 $step = $stepExecution->stepDefinition;
-                
+
                 if ($step->step_type === WorkflowStepDefinition::TYPE_WAIT) {
                     // Los pasos de espera se completan automáticamente
                     $stepExecution->markAsCompleted('Timeout alcanzado');
@@ -1250,9 +1280,9 @@ class AdvancedWorkflowEngine
                     $stepExecution->markAsFailed('Timeout alcanzado');
                     $stepExecution->workflowExecution->markAsFailed('Paso vencido por timeout');
                 }
-                
+
                 $processed++;
-                
+
             } catch (\Exception $e) {
                 Log::error('Error processing timeout for step execution', [
                     'step_execution_id' => $stepExecution->id,
@@ -1263,7 +1293,7 @@ class AdvancedWorkflowEngine
 
         return $processed;
     }
-    
+
     /**
      * Obtener destinatarios desde la configuración del paso
      */
@@ -1271,18 +1301,18 @@ class AdvancedWorkflowEngine
     {
         $stepConfig = $step->step_config ?? [];
         $recipientConfig = $stepConfig['recipient_config'] ?? [];
-        
+
         Log::info('🎯 Getting recipients from step config', [
             'recipient_config' => $recipientConfig,
-            'target_model' => get_class($targetModel)
+            'target_model' => get_class($targetModel),
         ]);
-        
+
         $recipients = [];
-        
+
         switch ($recipientConfig['type'] ?? 'static') {
             case 'dynamic':
                 $dynamicType = $recipientConfig['dynamic_type'] ?? null;
-                
+
                 switch ($dynamicType) {
                     case 'creator':
                         // El usuario que creó el registro
@@ -1299,7 +1329,7 @@ class AdvancedWorkflowEngine
                             Log::warning('⚠️ Could not find creator for dynamic recipient');
                         }
                         break;
-                        
+
                     case 'owner':
                         // El propietario actual del registro
                         if (method_exists($targetModel, 'owner') && $targetModel->owner) {
@@ -1311,7 +1341,7 @@ class AdvancedWorkflowEngine
                             }
                         }
                         break;
-                        
+
                     case 'assigned':
                         // Usuario asignado
                         if (isset($targetModel->assigned_to)) {
@@ -1321,12 +1351,12 @@ class AdvancedWorkflowEngine
                             }
                         }
                         break;
-                        
+
                     default:
                         Log::warning('⚠️ Unknown dynamic recipient type', ['type' => $dynamicType]);
                 }
                 break;
-                
+
             case 'static':
                 // Emails estáticos configurados
                 $staticEmails = $recipientConfig['emails'] ?? [];
@@ -1336,7 +1366,7 @@ class AdvancedWorkflowEngine
                     $recipients[] = $staticEmails;
                 }
                 break;
-                
+
             case 'role':
                 // Usuarios con un rol específico
                 $roleName = $recipientConfig['role_name'] ?? null;
@@ -1347,35 +1377,35 @@ class AdvancedWorkflowEngine
                     }
                 }
                 break;
-                
+
             default:
                 Log::warning('⚠️ Unknown recipient type', ['type' => $recipientConfig['type']]);
         }
-        
+
         // Limpiar y validar emails
-        $recipients = array_filter(array_unique($recipients), function($email) {
+        $recipients = array_filter(array_unique($recipients), function ($email) {
             return filter_var($email, FILTER_VALIDATE_EMAIL);
         });
-        
+
         Log::info('📧 Final recipients list', [
             'count' => count($recipients),
-            'recipients' => $recipients
+            'recipients' => $recipients,
         ]);
-        
+
         return array_values($recipients);
     }
-    
+
     /**
      * Preparar variables del modelo para usar en templates
      */
     protected function prepareModelVariables(Model $model, array $context = []): array
     {
         $variables = [];
-        
+
         // Variables del modelo principal
         $modelClass = class_basename($model);
         $modelKey = strtolower($modelClass);
-        
+
         // Crear también un alias más amigable para algunos modelos comunes
         $friendlyKeys = [
             'documentation' => 'document',
@@ -1384,16 +1414,16 @@ class AdvancedWorkflowEngine
             'order' => 'order',
             'invoice' => 'invoice',
         ];
-        
+
         $primaryKey = $friendlyKeys[$modelKey] ?? $modelKey;
-        
+
         // Información básica del modelo
         $modelData = [
             'id' => $model->getKey(),
             'created_at' => $model->created_at,
             'updated_at' => $model->updated_at,
         ];
-        
+
         // Agregar campos específicos del modelo
         $fillableFields = $model->getFillable();
         foreach ($fillableFields as $field) {
@@ -1401,41 +1431,41 @@ class AdvancedWorkflowEngine
                 $modelData[$field] = $model->$field;
             }
         }
-        
+
         // Agregar campos adicionales importantes que pueden no estar en fillable
         $additionalFields = ['state', 'status'];
         foreach ($additionalFields as $field) {
             if (isset($model->$field)) {
                 $value = $model->$field;
-                
+
                 // Si es un objeto State, extraer información útil
                 if (is_object($value) && method_exists($value, '__toString')) {
                     // Priorizar descripción amigable sobre clase completa
                     if (method_exists($value, 'getDescription')) {
                         $modelData[$field] = $value->getDescription();
-                        $modelData[$field . '_description'] = $value->getDescription();
+                        $modelData[$field.'_description'] = $value->getDescription();
                     } else {
                         $modelData[$field] = (string) $value;
                     }
-                    
-                    $modelData[$field . '_class'] = class_basename($value);
-                    
+
+                    $modelData[$field.'_class'] = class_basename($value);
+
                     // Agregar información adicional del state si está disponible
                     if (method_exists($value, 'getStateName')) {
-                        $modelData[$field . '_name'] = $value->getStateName();
+                        $modelData[$field.'_name'] = $value->getStateName();
                     }
                 } else {
                     $modelData[$field] = $value;
                 }
             }
         }
-        
+
         // Establecer tanto la clave original como la amigable
         $variables[$modelKey] = $modelData;
         if ($primaryKey !== $modelKey) {
             $variables[$primaryKey] = $modelData;
         }
-        
+
         // Variables del usuario creador (si existe)
         if (isset($model->created_by)) {
             $creator = \App\Models\User::find($model->created_by);
@@ -1453,18 +1483,18 @@ class AdvancedWorkflowEngine
                 'email' => $model->user->email,
             ];
         }
-        
+
         // Agregar contexto adicional
-        if (!empty($context)) {
+        if (! empty($context)) {
             $variables = array_merge($variables, $context);
         }
-        
+
         Log::info('🔧 Model variables prepared', [
             'model_class' => get_class($model),
             'model_key' => $modelKey,
-            'variables_keys' => array_keys($variables)
+            'variables_keys' => array_keys($variables),
         ]);
-        
+
         return $variables;
     }
 }

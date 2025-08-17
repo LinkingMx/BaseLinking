@@ -13,9 +13,13 @@ use Illuminate\Support\Facades\File;
 class LocalizationSettings extends SettingsPage
 {
     protected static ?string $navigationIcon = 'heroicon-o-globe-alt';
+
     protected static ?string $navigationGroup = 'Configuración';
+
     protected static ?string $title = 'Configuración de Localización';
+
     protected static ?string $navigationLabel = 'Localización';
+
     protected static ?int $navigationSort = 3;
 
     protected static string $settings = Settings::class;
@@ -39,7 +43,7 @@ class LocalizationSettings extends SettingsPage
                             ])
                             ->default('es')
                             ->required()
-                            ->helperText('Idioma para toda la aplicación. Se aplica a Laravel app()->locale(). Idioma actual: ' . app()->getLocale()),
+                            ->helperText('Idioma para toda la aplicación. Se aplica a Laravel app()->locale(). Idioma actual: '.app()->getLocale()),
 
                         Select::make('timezone')
                             ->label('Zona Horaria')
@@ -65,7 +69,7 @@ class LocalizationSettings extends SettingsPage
                             ->default('America/Mexico_City')
                             ->required()
                             ->searchable()
-                            ->helperText('Se aplica a todo el sistema incluyendo el panel de administración. Ejemplo actual: ' . now()->format('Y-m-d H:i T')),
+                            ->helperText('Se aplica a todo el sistema incluyendo el panel de administración. Ejemplo actual: '.now()->format('Y-m-d H:i T')),
                     ])->columns(2),
 
                 Section::make('Formatos de Fecha y Hora')
@@ -85,7 +89,7 @@ class LocalizationSettings extends SettingsPage
                             ])
                             ->default('d/m/Y')
                             ->required()
-                            ->helperText('Se usa en SettingsHelper para formatear fechas en toda la aplicación. Ejemplo: ' . now()->format('d/m/Y')),
+                            ->helperText('Se usa en SettingsHelper para formatear fechas en toda la aplicación. Ejemplo: '.now()->format('d/m/Y')),
 
                         Select::make('time_format')
                             ->label('Formato de Hora')
@@ -98,7 +102,7 @@ class LocalizationSettings extends SettingsPage
                             ])
                             ->default('H:i')
                             ->required()
-                            ->helperText('Se usa en SettingsHelper para formatear horas en toda la aplicación. Ejemplo: ' . now()->format('H:i')),
+                            ->helperText('Se usa en SettingsHelper para formatear horas en toda la aplicación. Ejemplo: '.now()->format('H:i')),
                     ])->columns(2),
 
                 Section::make('Configuración Monetaria')
@@ -168,7 +172,7 @@ class LocalizationSettings extends SettingsPage
             }
         } catch (\Exception $e) {
             // Log error but don't break the save process
-            logger()->error('Failed to apply localization settings immediately: ' . $e->getMessage());
+            logger()->error('Failed to apply localization settings immediately: '.$e->getMessage());
         }
     }
 
@@ -191,7 +195,7 @@ class LocalizationSettings extends SettingsPage
             }
         } catch (\Exception $e) {
             // Log error but don't break the save process
-            logger()->error('Failed to update .env file with localization settings: ' . $e->getMessage());
+            logger()->error('Failed to update .env file with localization settings: '.$e->getMessage());
         }
     }
 
@@ -202,17 +206,18 @@ class LocalizationSettings extends SettingsPage
     {
         $envPath = base_path('.env');
 
-        if (!File::exists($envPath)) {
+        if (! File::exists($envPath)) {
             logger()->warning('.env file not found, skipping environment variable update');
+
             return;
         }
 
         // Read the current .env file
         $envContent = File::get($envPath);
-        
+
         // Escape the value if it contains special characters
         $escapedValue = $this->escapeEnvValue($value);
-        
+
         // Pattern to match the key (with or without quotes)
         $pattern = "/^{$key}=.*$/m";
         $replacement = "{$key}={$escapedValue}";
@@ -222,7 +227,7 @@ class LocalizationSettings extends SettingsPage
             $envContent = preg_replace($pattern, $replacement, $envContent);
         } else {
             // Key doesn't exist, add it at the end
-            $envContent = rtrim($envContent, "\n") . "\n{$replacement}\n";
+            $envContent = rtrim($envContent, "\n")."\n{$replacement}\n";
         }
 
         // Write the updated content back to the .env file
@@ -236,7 +241,7 @@ class LocalizationSettings extends SettingsPage
     {
         // If value contains spaces, special characters, or is empty, wrap in quotes
         if (empty($value) || preg_match('/[\s#"\'\\\\]/', $value)) {
-            return '"' . str_replace('"', '\\"', $value) . '"';
+            return '"'.str_replace('"', '\\"', $value).'"';
         }
 
         return $value;
@@ -250,15 +255,15 @@ class LocalizationSettings extends SettingsPage
         try {
             // Clear application cache
             \Illuminate\Support\Facades\Artisan::call('cache:clear');
-            
+
             // Clear config cache
             \Illuminate\Support\Facades\Artisan::call('config:clear');
-            
+
             // Clear view cache
             \Illuminate\Support\Facades\Artisan::call('view:clear');
         } catch (\Exception $e) {
             // Log error but don't break the save process
-            logger()->error('Failed to clear caches after localization settings change: ' . $e->getMessage());
+            logger()->error('Failed to clear caches after localization settings change: '.$e->getMessage());
         }
     }
 }

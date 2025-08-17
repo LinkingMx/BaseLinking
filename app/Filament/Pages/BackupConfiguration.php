@@ -16,14 +16,17 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\SettingsPage;
-use Illuminate\Support\Facades\Storage;
 
 class BackupConfiguration extends SettingsPage
 {
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+
     protected static ?string $navigationGroup = 'Respaldos';
+
     protected static ?string $title = 'Configuración de Backup';
+
     protected static ?string $navigationLabel = 'Backup';
+
     protected static ?int $navigationSort = 1;
 
     protected static string $settings = BackupSettings::class;
@@ -67,24 +70,27 @@ class BackupConfiguration extends SettingsPage
                                         // Validate JSON structure
                                         $content = file_get_contents($value->getRealPath());
                                         $json = json_decode($content, true);
-                                        
+
                                         if (json_last_error() !== JSON_ERROR_NONE) {
                                             $fail('El archivo debe ser un JSON válido.');
+
                                             return;
                                         }
-                                        
+
                                         // Validate required Google Service Account fields
                                         $requiredFields = ['type', 'project_id', 'private_key_id', 'private_key', 'client_email', 'client_id', 'auth_uri', 'token_uri'];
                                         foreach ($requiredFields as $field) {
-                                            if (!isset($json[$field])) {
+                                            if (! isset($json[$field])) {
                                                 $fail("El archivo JSON debe contener el campo requerido: {$field}");
+
                                                 return;
                                             }
                                         }
-                                        
+
                                         // Validate that it's a service account
                                         if (($json['type'] ?? '') !== 'service_account') {
                                             $fail('El archivo debe ser de una cuenta de servicio de Google.');
+
                                             return;
                                         }
                                     }
@@ -273,7 +279,7 @@ class BackupConfiguration extends SettingsPage
                 ->color('info')
                 ->action(function (BackupService $backupService) {
                     $result = $backupService->testGoogleDriveConnection();
-                    
+
                     if ($result['success']) {
                         Notification::make()
                             ->title('Conexión exitosa')
@@ -297,12 +303,12 @@ class BackupConfiguration extends SettingsPage
                 ->action(function (BackupService $backupService) {
                     $folderName = $this->data['google_drive_folder_name'] ?? 'Laravel Backups';
                     $result = $backupService->createGoogleDriveFolder($folderName);
-                    
+
                     if ($result['success']) {
                         // Update settings with the folder ID
                         $this->data['google_drive_folder_id'] = $result['folder_id'];
                         $this->form->fill($this->data);
-                        
+
                         Notification::make()
                             ->title('Carpeta creada')
                             ->body($result['message'])
@@ -324,7 +330,7 @@ class BackupConfiguration extends SettingsPage
                 ->color('warning')
                 ->action(function (BackupService $backupService) {
                     $result = $backupService->testNotifications();
-                    
+
                     if ($result['success']) {
                         Notification::make()
                             ->title('Notificación enviada')

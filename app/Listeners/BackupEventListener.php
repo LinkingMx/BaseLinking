@@ -3,9 +3,9 @@
 namespace App\Listeners;
 
 use App\Services\BackupNotificationService;
-use Spatie\Backup\Events\BackupWasSuccessful;
-use Spatie\Backup\Events\BackupHasFailed;
 use Illuminate\Support\Facades\Log;
+use Spatie\Backup\Events\BackupHasFailed;
+use Spatie\Backup\Events\BackupWasSuccessful;
 
 class BackupEventListener
 {
@@ -23,7 +23,7 @@ class BackupEventListener
     {
         try {
             Log::info('Backup successful event received, sending notification');
-            
+
             $backupDestination = $event->backupDestination;
             $backupInfo = [
                 'size' => $backupDestination->newestBackup()?->size() ?? 0,
@@ -31,13 +31,13 @@ class BackupEventListener
                 'files_count' => null, // Not available from this event
                 'databases_count' => null, // Not available from this event
             ];
-            
+
             $this->notificationService->sendBackupSuccessful($backupInfo);
-            
+
         } catch (\Exception $e) {
-            Log::error('Failed to handle backup successful event: ' . $e->getMessage(), [
+            Log::error('Failed to handle backup successful event: '.$e->getMessage(), [
                 'exception' => $e,
-                'event' => get_class($event)
+                'event' => get_class($event),
             ]);
         }
     }
@@ -49,7 +49,7 @@ class BackupEventListener
     {
         try {
             Log::info('Backup failed event received, sending notification');
-            
+
             $this->notificationService->sendBackupFailed(
                 $event->exception->getMessage(),
                 [
@@ -58,11 +58,11 @@ class BackupEventListener
                     'line' => $event->exception->getLine(),
                 ]
             );
-            
+
         } catch (\Exception $e) {
-            Log::error('Failed to handle backup failed event: ' . $e->getMessage(), [
+            Log::error('Failed to handle backup failed event: '.$e->getMessage(), [
                 'exception' => $e,
-                'event' => get_class($event)
+                'event' => get_class($event),
             ]);
         }
     }

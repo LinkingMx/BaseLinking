@@ -23,7 +23,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true); // Si está activo
             $table->text('description')->nullable(); // Descripción del template
             $table->timestamps();
-            
+
             // Índices para optimización
             $table->index(['key', 'language']);
             $table->index('category');

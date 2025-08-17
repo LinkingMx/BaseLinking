@@ -3,7 +3,9 @@
 namespace App\Providers\Filament;
 
 use App\Helpers\SettingsHelper;
+use BezhanSalleh\FilamentExceptions\FilamentExceptionsPlugin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Datlechin\FilamentMenuBuilder\FilamentMenuBuilderPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -11,7 +13,6 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Colors\Color;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -19,8 +20,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Datlechin\FilamentMenuBuilder\FilamentMenuBuilderPlugin;
-use BezhanSalleh\FilamentExceptions\FilamentExceptionsPlugin;
 use Jeffgreco13\FilamentBreezy\BreezyCore;
 
 class AdminPanelProvider extends PanelProvider
@@ -30,7 +29,7 @@ class AdminPanelProvider extends PanelProvider
         // Load settings
         $generalSettings = SettingsHelper::general();
         $appearanceSettings = SettingsHelper::appearance();
-        
+
         // Note: Localization settings are now applied globally in AppServiceProvider
 
         return $panel
@@ -38,9 +37,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName($generalSettings->app_name ?? 'SaaS Helpdesk')
-            ->brandLogo($generalSettings->app_logo ? asset('storage/' . $generalSettings->app_logo) : null)
+            ->brandLogo($generalSettings->app_logo ? asset('storage/'.$generalSettings->app_logo) : null)
             ->brandLogoHeight('2rem')
-            ->darkModeBrandLogo($appearanceSettings->dark_mode_logo ? asset('storage/' . $appearanceSettings->dark_mode_logo) : null)
+            ->darkModeBrandLogo($appearanceSettings->dark_mode_logo ? asset('storage/'.$appearanceSettings->dark_mode_logo) : null)
             ->login()
             ->registration()
             ->passwordReset()
@@ -51,13 +50,12 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->resources([
                 \Z3d0X\FilamentLogger\Resources\ActivityResource::class,
+                \App\Filament\Resources\WorkflowWizardResource::class,
             ])
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,

@@ -9,16 +9,15 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ExecutionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'executions';
-    
+
     protected static ?string $title = 'Ejecuciones del Workflow';
-    
+
     protected static ?string $modelLabel = 'Ejecución';
-    
+
     protected static ?string $pluralModelLabel = 'Ejecuciones';
 
     public function form(Form $form): Form
@@ -28,11 +27,11 @@ class ExecutionsRelationManager extends RelationManager
                 Forms\Components\TextInput::make('target_model')
                     ->label('Modelo Objetivo')
                     ->disabled(),
-                    
+
                 Forms\Components\TextInput::make('target_id')
                     ->label('ID del Registro')
                     ->disabled(),
-                    
+
                 Forms\Components\Select::make('status')
                     ->label('Estado')
                     ->options([
@@ -43,7 +42,7 @@ class ExecutionsRelationManager extends RelationManager
                         AdvancedWorkflowExecution::STATUS_CANCELLED => 'Cancelado',
                     ])
                     ->disabled(),
-                    
+
                 Forms\Components\Textarea::make('context_data')
                     ->label('Datos de Contexto')
                     ->formatStateUsing(fn ($state) => json_encode($state, JSON_PRETTY_PRINT))
@@ -60,20 +59,20 @@ class ExecutionsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('target_model')
                     ->label('Modelo')
                     ->formatStateUsing(fn (string $state): string => class_basename($state))
                     ->badge()
                     ->color('info'),
-                    
+
                 Tables\Columns\TextColumn::make('target_id')
                     ->label('Registro')
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('status')
                     ->label('Estado')
-                    ->formatStateUsing(fn (string $state): string => match($state) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         AdvancedWorkflowExecution::STATUS_PENDING => 'Pendiente',
                         AdvancedWorkflowExecution::STATUS_IN_PROGRESS => 'En progreso',
                         AdvancedWorkflowExecution::STATUS_COMPLETED => 'Completado',
@@ -82,7 +81,7 @@ class ExecutionsRelationManager extends RelationManager
                         default => $state,
                     })
                     ->badge()
-                    ->color(fn (string $state): string => match($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         AdvancedWorkflowExecution::STATUS_PENDING => 'warning',
                         AdvancedWorkflowExecution::STATUS_IN_PROGRESS => 'info',
                         AdvancedWorkflowExecution::STATUS_COMPLETED => 'success',
@@ -90,46 +89,51 @@ class ExecutionsRelationManager extends RelationManager
                         AdvancedWorkflowExecution::STATUS_CANCELLED => 'gray',
                         default => 'secondary',
                     }),
-                    
+
                 Tables\Columns\TextColumn::make('current_step_order')
                     ->label('Paso Actual')
                     ->sortable()
                     ->formatStateUsing(function ($state, $record) {
-                        if (!$state) return '-';
+                        if (! $state) {
+                            return '-';
+                        }
                         $totalSteps = $record->workflow->stepDefinitions()->active()->count();
+
                         return "{$state} / {$totalSteps}";
                     }),
-                    
+
                 Tables\Columns\TextColumn::make('progress')
                     ->label('Progreso')
-                    ->formatStateUsing(fn ($state, $record) => $record->getProgress() . '%')
+                    ->formatStateUsing(fn ($state, $record) => $record->getProgress().'%')
                     ->badge()
                     ->color('success'),
-                    
+
                 Tables\Columns\TextColumn::make('initiator.name')
                     ->label('Iniciado por')
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('started_at')
                     ->label('Iniciado')
                     ->dateTime()
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('completed_at')
                     ->label('Completado')
                     ->dateTime()
                     ->sortable()
                     ->placeholder('En progreso'),
-                    
+
                 Tables\Columns\TextColumn::make('elapsed_time')
                     ->label('Tiempo')
                     ->formatStateUsing(function ($state, $record) {
                         $elapsed = $record->getElapsedTime();
-                        if (!$elapsed) return '-';
-                        
+                        if (! $elapsed) {
+                            return '-';
+                        }
+
                         $hours = intval($elapsed / 60);
                         $minutes = $elapsed % 60;
-                        
+
                         return $hours > 0 ? "{$hours}h {$minutes}m" : "{$minutes}m";
                     }),
             ])
@@ -143,11 +147,11 @@ class ExecutionsRelationManager extends RelationManager
                         AdvancedWorkflowExecution::STATUS_FAILED => 'Fallado',
                         AdvancedWorkflowExecution::STATUS_CANCELLED => 'Cancelado',
                     ]),
-                    
+
                 Tables\Filters\Filter::make('created_today')
                     ->label('Hoy')
                     ->query(fn (Builder $query): Builder => $query->whereDate('created_at', today())),
-                    
+
                 Tables\Filters\Filter::make('in_progress')
                     ->label('En progreso')
                     ->query(fn (Builder $query): Builder => $query->where('status', AdvancedWorkflowExecution::STATUS_IN_PROGRESS)),
@@ -160,13 +164,13 @@ class ExecutionsRelationManager extends RelationManager
                             ->with(['stepDefinition', 'assignedUser', 'completedByUser'])
                             ->orderBy('id')
                             ->get();
-                            
+
                         return view('filament.modals.workflow-execution-details', [
                             'execution' => $record,
                             'stepExecutions' => $stepExecutions,
                         ]);
                     }),
-                    
+
                 Tables\Actions\Action::make('cancel')
                     ->label('Cancelar')
                     ->icon('heroicon-o-x-circle')
@@ -176,7 +180,7 @@ class ExecutionsRelationManager extends RelationManager
                     })
                     ->requiresConfirmation()
                     ->visible(fn (AdvancedWorkflowExecution $record) => $record->canBeCancelled()),
-                    
+
                 Tables\Actions\Action::make('restart')
                     ->label('Reiniciar')
                     ->icon('heroicon-o-arrow-path')
@@ -192,7 +196,7 @@ class ExecutionsRelationManager extends RelationManager
                         ]);
                         $newExecution->status = AdvancedWorkflowExecution::STATUS_PENDING;
                         $newExecution->save();
-                        
+
                         // Inicializar nueva ejecución
                         if ($newExecution->initialize()) {
                             $workflowEngine = app(\App\Services\AdvancedWorkflowEngine::class);
@@ -220,7 +224,7 @@ class ExecutionsRelationManager extends RelationManager
             ])
             ->defaultSort('created_at', 'desc');
     }
-    
+
     public function isReadOnly(): bool
     {
         return false;

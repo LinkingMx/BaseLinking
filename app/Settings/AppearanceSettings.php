@@ -7,13 +7,21 @@ use Spatie\LaravelSettings\Settings;
 class AppearanceSettings extends Settings
 {
     public ?string $theme;
+
     public ?string $primary_color;
+
     public ?string $danger_color;
+
     public ?string $gray_color;
+
     public ?string $info_color;
+
     public ?string $success_color;
+
     public ?string $warning_color;
+
     public ?string $font_family;
+
     public ?string $dark_mode_logo;
 
     public static function group(): string
@@ -41,13 +49,14 @@ class AppearanceSettings extends Settings
      */
     public function getDarkModeLogoUrlAttribute(): ?string
     {
-        if (!$this->dark_mode_logo) {
+        if (! $this->dark_mode_logo) {
             // Fallback to general app logo
             $generalSettings = app(\App\Settings\GeneralSettings::class);
+
             return $generalSettings->getAppLogoUrlAttribute();
         }
 
-        return asset('storage/' . $this->dark_mode_logo);
+        return asset('storage/'.$this->dark_mode_logo);
     }
 
     /**

@@ -3,8 +3,8 @@
 namespace App\Traits;
 
 use App\Services\EmailTemplateService;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 trait NotifiesModelChanges
 {
@@ -37,22 +37,22 @@ trait NotifiesModelChanges
      */
     protected function notifyModelCreated()
     {
-        if (!$this->shouldNotifyModelChanges()) {
+        if (! $this->shouldNotifyModelChanges()) {
             return;
         }
 
         try {
             $emailService = app(EmailTemplateService::class);
-            
+
             $modelData = $this->getModelNotificationData('created');
             $variables = $emailService->getModelVariables($modelData);
-            
+
             $template = $emailService->processTemplate('model-created', $variables);
-            
+
             $this->sendModelNotification($template);
-            
+
         } catch (\Exception $e) {
-            Log::error('Failed to send model created notification: ' . $e->getMessage());
+            Log::error('Failed to send model created notification: '.$e->getMessage());
         }
     }
 
@@ -61,24 +61,24 @@ trait NotifiesModelChanges
      */
     protected function notifyModelUpdated()
     {
-        if (!$this->shouldNotifyModelChanges() || !$this->wasChanged()) {
+        if (! $this->shouldNotifyModelChanges() || ! $this->wasChanged()) {
             return;
         }
 
         try {
             $emailService = app(EmailTemplateService::class);
-            
+
             $modelData = $this->getModelNotificationData('updated');
             $modelData['changes_summary'] = $this->getChangesSummary();
-            
+
             $variables = $emailService->getModelVariables($modelData);
-            
+
             $template = $emailService->processTemplate('model-updated', $variables);
-            
+
             $this->sendModelNotification($template);
-            
+
         } catch (\Exception $e) {
-            Log::error('Failed to send model updated notification: ' . $e->getMessage());
+            Log::error('Failed to send model updated notification: '.$e->getMessage());
         }
     }
 
@@ -87,22 +87,22 @@ trait NotifiesModelChanges
      */
     protected function notifyModelDeleted()
     {
-        if (!$this->shouldNotifyModelChanges()) {
+        if (! $this->shouldNotifyModelChanges()) {
             return;
         }
 
         try {
             $emailService = app(EmailTemplateService::class);
-            
+
             $modelData = $this->getModelNotificationData('deleted');
             $variables = $emailService->getModelVariables($modelData);
-            
+
             $template = $emailService->processTemplate('model-deleted', $variables);
-            
+
             $this->sendModelNotification($template);
-            
+
         } catch (\Exception $e) {
-            Log::error('Failed to send model deleted notification: ' . $e->getMessage());
+            Log::error('Failed to send model deleted notification: '.$e->getMessage());
         }
     }
 
@@ -131,18 +131,18 @@ trait NotifiesModelChanges
     {
         $changes = $this->getChanges();
         $summary = [];
-        
+
         foreach ($changes as $field => $newValue) {
             if (in_array($field, ['updated_at', 'created_at'])) {
                 continue;
             }
-            
+
             $oldValue = $this->getOriginal($field);
             $fieldLabel = $this->getFieldLabel($field);
-            
+
             $summary[] = "{$fieldLabel}: {$oldValue} → {$newValue}";
         }
-        
+
         return implode(', ', $summary);
     }
 
@@ -152,13 +152,13 @@ trait NotifiesModelChanges
     protected function sendModelNotification(array $template)
     {
         $recipients = $this->getModelNotificationRecipients();
-        
+
         if (empty($recipients)) {
             return;
         }
 
         $content = app(EmailTemplateService::class)->getWrappedContent($template['content']);
-        
+
         foreach ($recipients as $email) {
             Mail::send([], [], function ($message) use ($email, $template, $content) {
                 $message->to($email)
@@ -184,8 +184,8 @@ trait NotifiesModelChanges
      */
     protected function getModelNotificationRecipients(): array
     {
-        return property_exists($this, 'notificationRecipients') 
-            ? $this->notificationRecipients 
+        return property_exists($this, 'notificationRecipients')
+            ? $this->notificationRecipients
             : [config('mail.from.address')];
     }
 
@@ -207,7 +207,7 @@ trait NotifiesModelChanges
         if (method_exists($this, 'getTitle')) {
             return $this->getTitle();
         }
-        
+
         return $this->name ?? $this->title ?? "ID: {$this->getKey()}";
     }
 
@@ -220,7 +220,7 @@ trait NotifiesModelChanges
         if (property_exists($this, 'status')) {
             return $this->status;
         }
-        
+
         return 'Activo';
     }
 
@@ -231,6 +231,7 @@ trait NotifiesModelChanges
     protected function getModelUrl(): string
     {
         $modelName = strtolower(class_basename($this));
+
         return url("/admin/{$modelName}s/{$this->getKey()}");
     }
 
@@ -241,6 +242,7 @@ trait NotifiesModelChanges
     protected function getModelEditUrl(): string
     {
         $modelName = strtolower(class_basename($this));
+
         return url("/admin/{$modelName}s/{$this->getKey()}/edit");
     }
 
@@ -259,7 +261,7 @@ trait NotifiesModelChanges
             'description' => 'Descripción',
             // Add more field labels as needed
         ];
-        
+
         return $labels[$field] ?? ucfirst(str_replace('_', ' ', $field));
     }
 
@@ -268,7 +270,7 @@ trait NotifiesModelChanges
      */
     protected function triggerWorkflow(string $event): void
     {
-        if (!$this->shouldTriggerWorkflows()) {
+        if (! $this->shouldTriggerWorkflows()) {
             return;
         }
 
@@ -276,7 +278,7 @@ trait NotifiesModelChanges
             $workflowEngine = app(\App\Services\AdvancedWorkflowEngine::class);
             $workflowEngine->trigger($this, $event);
         } catch (\Exception $e) {
-            Log::error('Failed to trigger workflow: ' . $e->getMessage(), [
+            Log::error('Failed to trigger workflow: '.$e->getMessage(), [
                 'model' => get_class($this),
                 'id' => $this->getKey(),
                 'event' => $event,

@@ -18,13 +18,13 @@ class EmailTemplateService
     /**
      * Procesar template por clave
      */
-    public function processTemplate(string $key, array $variables = [], string $language = null): array
+    public function processTemplate(string $key, array $variables = [], ?string $language = null): array
     {
         $language = $language ?? $this->settings->default_language;
-        
+
         $template = EmailTemplate::getByKey($key, $language);
-        
-        if (!$template) {
+
+        if (! $template) {
             throw new \Exception("Template con clave '{$key}' no encontrado para idioma '{$language}'");
         }
 
@@ -46,7 +46,7 @@ class EmailTemplateService
     {
         $globalVariables = $this->getGlobalVariables();
         $commonVariables = $this->getCommonVariables();
-        
+
         return array_merge($globalVariables, $commonVariables, $customVariables);
     }
 
@@ -59,7 +59,7 @@ class EmailTemplateService
             'app_name' => $this->generalSettings->app_name ?? config('app.name'),
             'app_url' => config('app.url'),
             'contact_email' => $this->generalSettings->contact_email ?? 'contact@example.com',
-            'support_url' => config('app.url') . '/support',
+            'support_url' => config('app.url').'/support',
         ];
     }
 
@@ -69,7 +69,7 @@ class EmailTemplateService
     public function getCommonVariables(): array
     {
         $user = Auth::user();
-        
+
         return [
             'current_date' => Carbon::now()->format('d/m/Y'),
             'current_time' => Carbon::now()->format('H:i:s'),
@@ -230,12 +230,12 @@ class EmailTemplateService
      */
     public function getWrappedContent(string $content): string
     {
-        if (!$this->settings->auto_wrap_content) {
+        if (! $this->settings->auto_wrap_content) {
             return $content;
         }
 
         $wrapper = $this->settings->template_wrapper;
-        
+
         if (view()->exists($wrapper)) {
             return view($wrapper, ['content' => $content])->render();
         }
@@ -254,16 +254,16 @@ class EmailTemplateService
             $bytes /= 1024;
         }
 
-        return round($bytes, $precision) . ' ' . $units[$i];
+        return round($bytes, $precision).' '.$units[$i];
     }
 
     /**
      * Validar que un template existe y está activo
      */
-    public function templateExists(string $key, string $language = null): bool
+    public function templateExists(string $key, ?string $language = null): bool
     {
         $language = $language ?? $this->settings->default_language;
-        
+
         return EmailTemplate::where('key', $key)
             ->where('language', $language)
             ->where('is_active', true)
@@ -273,10 +273,10 @@ class EmailTemplateService
     /**
      * Obtener lista de templates disponibles por categoría
      */
-    public function getTemplatesByCategory(string $category, string $language = null): array
+    public function getTemplatesByCategory(string $category, ?string $language = null): array
     {
         $language = $language ?? $this->settings->default_language;
-        
+
         return EmailTemplate::getByCategory($category, $language)
             ->map(function ($template) {
                 return [

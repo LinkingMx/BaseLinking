@@ -18,7 +18,7 @@ class EditEmailConfiguration extends EditRecord
             EmailConfiguration::where('id', '!=', $this->record->id)
                 ->update(['is_active' => false]);
         }
-        
+
         return $data;
     }
 

@@ -3,14 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\StateTransitionResource\Pages;
-use App\Models\ApprovalState;
 use App\Models\StateTransition;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class StateTransitionResource extends Resource
 {
@@ -24,7 +22,7 @@ class StateTransitionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Transiciones de Estado';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Automatización';
 
     protected static ?int $navigationSort = 5;
 
@@ -103,7 +101,42 @@ class StateTransitionResource extends Resource
                     ])
                     ->columns(1),
 
-                Forms\Components\Section::make('Condiciones y Reglas')
+                Forms\Components\Section::make('Restricciones de Usuario')
+                    ->description('Configure restricciones especiales para diferentes tipos de usuarios')
+                    ->schema([
+                        Forms\Components\Select::make('creator_restriction')
+                            ->label('Restricción para Creadores')
+                            ->options([
+                                'none' => 'Sin restricción',
+                                'cannot_reverse_after_submission' => 'No puede revertir tras envío a autoridad superior',
+                            ])
+                            ->default('none')
+                            ->live()
+                            ->helperText('Controla qué puede hacer el usuario que creó el registro'),
+
+                        Forms\Components\TagsInput::make('restriction_applies_to_roles')
+                            ->label('Aplicar Restricción a Roles')
+                            ->visible(fn (Forms\Get $get): bool => $get('creator_restriction') !== 'none')
+                            ->default(['User'])
+                            ->helperText('Roles a los que se aplica la restricción de creador'),
+
+                        Forms\Components\TagsInput::make('restriction_except_roles')
+                            ->label('Excepto Estos Roles')
+                            ->visible(fn (Forms\Get $get): bool => $get('creator_restriction') !== 'none')
+                            ->default(['super_admin'])
+                            ->helperText('Roles que pueden ignorar la restricción (ejemplo: super_admin)'),
+
+                        Forms\Components\TextInput::make('creator_field_name')
+                            ->label('Campo de Creador')
+                            ->visible(fn (Forms\Get $get): bool => $get('creator_restriction') !== 'none')
+                            ->default('created_by')
+                            ->helperText('Campo que identifica quién creó el registro'),
+                    ])
+                    ->columns(2)
+                    ->collapsed(),
+
+                Forms\Components\Section::make('Condiciones Avanzadas (JSON)')
+                    ->description('Para usuarios técnicos: reglas personalizadas en formato JSON')
                     ->schema([
                         Forms\Components\Repeater::make('condition_rules')
                             ->label('Reglas de Condición')
@@ -139,7 +172,8 @@ class StateTransitionResource extends Resource
                             ->columns(3)
                             ->collapsible()
                             ->collapsed(),
-                    ]),
+                    ])
+                    ->collapsed(),
 
                 Forms\Components\Section::make('Configuración de Notificaciones y Mensajes')
                     ->schema([
@@ -213,6 +247,22 @@ class StateTransitionResource extends Resource
                     ->label('Req. Aprobación')
                     ->boolean()
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('creator_restriction')
+                    ->label('Restricción')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'none' => 'Sin restricción',
+                        'cannot_reverse_after_submission' => 'No puede revertir',
+                        default => $state
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'none' => 'gray',
+                        'cannot_reverse_after_submission' => 'warning',
+                        default => 'primary'
+                    })
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('sort_order')
                     ->label('Orden')

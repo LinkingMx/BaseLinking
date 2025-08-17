@@ -17,15 +17,15 @@ return new class extends Migration
                 ->whereNull('content')
                 ->orWhere('content', '')
                 ->get();
-                
+
             foreach ($templates as $template) {
-                if (!empty($template->html_content)) {
+                if (! empty($template->html_content)) {
                     \DB::table('email_templates')
                         ->where('id', $template->id)
                         ->update(['content' => $template->html_content]);
                 }
             }
-            
+
             // Eliminar campos innecesarios
             if (Schema::hasColumn('email_templates', 'html_content')) {
                 $table->dropColumn('html_content');

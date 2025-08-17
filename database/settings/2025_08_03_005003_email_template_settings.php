@@ -10,7 +10,7 @@ return new class extends SettingsMigration
         $this->migrator->add('email_templates.default_language', 'es');
         $this->migrator->add('email_templates.available_languages', [
             'es' => 'Español',
-            'en' => 'English'
+            'en' => 'English',
         ]);
         $this->migrator->add('email_templates.default_from_name', 'SaaS Helpdesk');
         $this->migrator->add('email_templates.default_from_email', 'noreply@saashelpdesk.test');

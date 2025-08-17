@@ -28,6 +28,7 @@ class CreateTestUser extends Command
     {
         if (User::where('email', 'admin@example.com')->exists()) {
             $this->info('Admin user already exists');
+
             return;
         }
 
@@ -35,7 +36,7 @@ class CreateTestUser extends Command
             'name' => 'Admin User',
             'email' => 'admin@example.com',
             'email_verified_at' => now(),
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
 
         $this->info('Admin user created successfully!');

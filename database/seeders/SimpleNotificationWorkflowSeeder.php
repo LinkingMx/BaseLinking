@@ -3,9 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\AdvancedWorkflow;
-use App\Models\WorkflowStepDefinition;
-use App\Models\EmailTemplate;
 use App\Models\Documentation;
+use App\Models\EmailTemplate;
+use App\Models\WorkflowStepDefinition;
 use Illuminate\Database\Seeder;
 
 class SimpleNotificationWorkflowSeeder extends Seeder
@@ -79,23 +79,23 @@ class SimpleNotificationWorkflowSeeder extends Seeder
                 'document.state',
                 'user.name',
                 'user.email',
-                'app_name'
+                'app_name',
             ],
             'model_type' => Documentation::class,
             'model_variables' => [
                 'document' => [
                     'title' => 'Título del documento',
                     'created_at' => 'Fecha de creación',
-                    'state' => 'Estado actual'
+                    'state' => 'Estado actual',
                 ],
                 'user' => [
                     'name' => 'Nombre del usuario',
-                    'email' => 'Email del usuario'
-                ]
+                    'email' => 'Email del usuario',
+                ],
             ],
             'language' => 'es',
             'is_active' => true,
-            'description' => 'Notificación simple enviada al creador cuando crea un documento'
+            'description' => 'Notificación simple enviada al creador cuando crea un documento',
         ]);
 
         $this->command->info('   📧 Email template "simple_doc_created" creado');
@@ -114,7 +114,7 @@ class SimpleNotificationWorkflowSeeder extends Seeder
             'version' => 1,
             'is_active' => true,
             'trigger_conditions' => [
-                'events' => ['created']
+                'events' => ['created'],
             ],
         ]);
 
@@ -130,26 +130,26 @@ class SimpleNotificationWorkflowSeeder extends Seeder
             'step_config' => [
                 // Email template dinámico
                 'email_template_key' => 'simple_doc_created',
-                
+
                 // Destinatario: el creador del documento
                 'recipient_config' => [
                     'type' => 'dynamic',
-                    'dynamic_type' => 'creator'
+                    'dynamic_type' => 'creator',
                 ],
-                
+
                 // Variables adicionales
                 'template_variables' => [
                     'notification_type' => 'creation_confirmation',
-                    'workflow_name' => 'Simple Notification'
+                    'workflow_name' => 'Simple Notification',
                 ],
-                
+
                 'notifications' => [
-                    'priority' => 'normal'
-                ]
+                    'priority' => 'normal',
+                ],
             ],
             'conditions' => [
-                'trigger_events' => ['created']
-            ]
+                'trigger_events' => ['created'],
+            ],
         ]);
 
         $this->command->info("   🔄 Workflow simple creado (ID: {$workflow->id})");

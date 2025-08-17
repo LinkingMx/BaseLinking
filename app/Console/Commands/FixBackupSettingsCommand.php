@@ -30,16 +30,16 @@ class FixBackupSettingsCommand extends Command
 
         try {
             $settings = app(BackupSettings::class);
-            
+
             $changed = false;
 
             // Fix nullable string fields
             $nullableFields = [
                 'google_drive_service_account_path',
-                'google_drive_service_account_original_name', 
+                'google_drive_service_account_original_name',
                 'google_drive_folder_id',
                 'notification_email',
-                'slack_webhook_url'
+                'slack_webhook_url',
             ];
 
             foreach ($nullableFields as $field) {
@@ -58,7 +58,8 @@ class FixBackupSettingsCommand extends Command
             }
 
         } catch (\Exception $e) {
-            $this->error('Error fixing BackupSettings: ' . $e->getMessage());
+            $this->error('Error fixing BackupSettings: '.$e->getMessage());
+
             return Command::FAILURE;
         }
 

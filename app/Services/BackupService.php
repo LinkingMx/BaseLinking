@@ -3,17 +3,17 @@
 namespace App\Services;
 
 use App\Settings\BackupSettings;
-use App\Services\BackupNotificationService;
+use Carbon\Carbon;
 use Google\Client;
 use Google\Service\Drive;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Artisan;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class BackupService
 {
     protected BackupSettings $settings;
+
     protected BackupNotificationService $notificationService;
 
     public function __construct(BackupSettings $settings, BackupNotificationService $notificationService)
@@ -28,7 +28,7 @@ class BackupService
     public function testGoogleDriveConnection(): array
     {
         try {
-            if (!$this->settings->google_drive_enabled) {
+            if (! $this->settings->google_drive_enabled) {
                 return [
                     'success' => false,
                     'message' => 'Google Drive está deshabilitado.',
@@ -36,23 +36,23 @@ class BackupService
             }
 
             $credentials = $this->settings->getGoogleDriveCredentials();
-            if (!$credentials) {
+            if (! $credentials) {
                 return [
                     'success' => false,
                     'message' => 'No se pudieron cargar las credenciales de Google Drive.',
                 ];
             }
 
-            $client = new Client();
+            $client = new Client;
             $client->setAuthConfig($credentials);
             $client->addScope(Drive::DRIVE);
 
             $service = new Drive($client);
-            
+
             // Try to get folder information
             if ($this->settings->google_drive_folder_id) {
                 $folder = $service->files->get($this->settings->google_drive_folder_id);
-                
+
                 return [
                     'success' => true,
                     'message' => "Conexión exitosa. Carpeta: {$folder->getName()}",
@@ -61,18 +61,18 @@ class BackupService
             } else {
                 // Test basic connection
                 $service->files->listFiles(['pageSize' => 1]);
-                
+
                 return [
                     'success' => true,
                     'message' => 'Conexión exitosa. No se ha configurado una carpeta específica.',
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('Google Drive connection test failed: ' . $e->getMessage());
-            
+            Log::error('Google Drive connection test failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => 'Error de conexión: ' . $e->getMessage(),
+                'message' => 'Error de conexión: '.$e->getMessage(),
             ];
         }
     }
@@ -84,14 +84,14 @@ class BackupService
     {
         try {
             $credentials = $this->settings->getGoogleDriveCredentials();
-            if (!$credentials) {
+            if (! $credentials) {
                 return [
                     'success' => false,
                     'message' => 'No se pudieron cargar las credenciales de Google Drive.',
                 ];
             }
 
-            $client = new Client();
+            $client = new Client;
             $client->setAuthConfig($credentials);
             $client->addScope(Drive::DRIVE);
 
@@ -103,6 +103,7 @@ class BackupService
 
             if (count($response->getFiles()) > 0) {
                 $folder = $response->getFiles()[0];
+
                 return [
                     'success' => true,
                     'message' => 'Carpeta encontrada.',
@@ -114,7 +115,7 @@ class BackupService
             // Create new folder
             $fileMetadata = new \Google\Service\Drive\DriveFile([
                 'name' => $folderName,
-                'mimeType' => 'application/vnd.google-apps.folder'
+                'mimeType' => 'application/vnd.google-apps.folder',
             ]);
 
             $folder = $service->files->create($fileMetadata, ['fields' => 'id,name']);
@@ -126,11 +127,11 @@ class BackupService
                 'folder_name' => $folder->getName(),
             ];
         } catch (\Exception $e) {
-            Log::error('Google Drive folder creation failed: ' . $e->getMessage());
-            
+            Log::error('Google Drive folder creation failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => 'Error al crear carpeta: ' . $e->getMessage(),
+                'message' => 'Error al crear carpeta: '.$e->getMessage(),
             ];
         }
     }
@@ -141,26 +142,26 @@ class BackupService
     public function executeBackup(): array
     {
         $startTime = microtime(true);
-        
+
         try {
             // Clear config cache to ensure latest settings are used
             Artisan::call('config:clear');
-            
+
             Log::info('Starting backup execution', [
                 'backup_name' => $this->settings->backup_name,
                 'include_files' => $this->settings->include_files,
                 'include_databases' => $this->settings->include_databases,
             ]);
-            
+
             // Prepare backup command arguments
             $arguments = [];
-            if (!$this->settings->include_files) {
+            if (! $this->settings->include_files) {
                 $arguments['--only-db'] = true;
             }
-            if (!$this->settings->include_databases) {
+            if (! $this->settings->include_databases) {
                 $arguments['--only-files'] = true;
             }
-            
+
             // Run backup command
             $exitCode = Artisan::call('backup:run', $arguments);
             $output = Artisan::output();
@@ -171,7 +172,7 @@ class BackupService
                     'duration' => $duration,
                     'exit_code' => $exitCode,
                 ]);
-                
+
                 // Get backup statistics for notification
                 $stats = $this->getLatestBackupInfo();
                 $backupInfo = [
@@ -180,10 +181,10 @@ class BackupService
                     'files_count' => $stats['files_count'] ?? null,
                     'databases_count' => $stats['databases_count'] ?? null,
                 ];
-                
+
                 // Send success notification
                 $this->notificationService->sendBackupSuccessful($backupInfo);
-                
+
                 return [
                     'success' => true,
                     'message' => 'Backup ejecutado exitosamente.',
@@ -191,14 +192,14 @@ class BackupService
                     'duration' => $duration,
                 ];
             } else {
-                Log::error('Backup failed with exit code: ' . $exitCode, [
+                Log::error('Backup failed with exit code: '.$exitCode, [
                     'output' => $output,
                     'duration' => $duration,
                 ]);
-                
+
                 // Send failure notification
                 $this->notificationService->sendBackupFailed(
-                    'El comando de backup falló con código de salida: ' . $exitCode,
+                    'El comando de backup falló con código de salida: '.$exitCode,
                     [
                         'command' => 'backup:run',
                         'exit_code' => $exitCode,
@@ -206,7 +207,7 @@ class BackupService
                         'duration' => $duration,
                     ]
                 );
-                
+
                 return [
                     'success' => false,
                     'message' => 'Error al ejecutar backup.',
@@ -216,12 +217,12 @@ class BackupService
             }
         } catch (\Exception $e) {
             $duration = round(microtime(true) - $startTime, 2);
-            
-            Log::error('Backup execution failed: ' . $e->getMessage(), [
+
+            Log::error('Backup execution failed: '.$e->getMessage(), [
                 'exception' => $e,
                 'duration' => $duration,
             ]);
-            
+
             // Send failure notification
             $this->notificationService->sendBackupFailed(
                 $e->getMessage(),
@@ -230,10 +231,10 @@ class BackupService
                     'duration' => $duration,
                 ]
             );
-            
+
             return [
                 'success' => false,
-                'message' => 'Error al ejecutar backup: ' . $e->getMessage(),
+                'message' => 'Error al ejecutar backup: '.$e->getMessage(),
             ];
         }
     }
@@ -244,11 +245,11 @@ class BackupService
     public function getBackupList(): array
     {
         $backups = [];
-        
+
         // Get local backups
         try {
             $currentBackupName = $this->settings->backup_name ?? config('backup.backup.name', 'laravel-backup');
-            
+
             // Search in multiple possible directories:
             // 1. Current configured backup name
             // 2. Laravel (default Spatie backup name)
@@ -258,16 +259,16 @@ class BackupService
                 'Laravel',
                 'laravel-backup',
             ];
-            
+
             // Remove duplicates and empty values
             $searchDirectories = array_unique(array_filter($searchDirectories));
-            
+
             Log::debug('Looking for backups in local disk', [
                 'current_backup_name' => $currentBackupName,
                 'search_directories' => $searchDirectories,
                 'disk_path' => Storage::disk('local')->path(''),
             ]);
-            
+
             foreach ($searchDirectories as $searchDir) {
                 if (Storage::disk('local')->directoryExists($searchDir)) {
                     $localFiles = Storage::disk('local')->files($searchDir);
@@ -275,7 +276,7 @@ class BackupService
                         'directory' => $searchDir,
                         'file_count' => count($localFiles),
                     ]);
-                    
+
                     foreach ($localFiles as $file) {
                         if (str_ends_with($file, '.zip')) {
                             $backups[] = [
@@ -293,23 +294,23 @@ class BackupService
                     ]);
                 }
             }
-            
+
             // If no backups found in expected directories, scan all directories for zip files
             if (empty($backups)) {
                 Log::debug('No backups found in expected directories, scanning all directories');
                 $allDirectories = Storage::disk('local')->directories();
-                
+
                 foreach ($allDirectories as $dir) {
                     try {
                         $files = Storage::disk('local')->files($dir);
-                        $zipFiles = array_filter($files, fn($file) => str_ends_with($file, '.zip'));
-                        
-                        if (!empty($zipFiles)) {
+                        $zipFiles = array_filter($files, fn ($file) => str_ends_with($file, '.zip'));
+
+                        if (! empty($zipFiles)) {
                             Log::debug('Found backup files in unexpected directory', [
                                 'directory' => $dir,
                                 'zip_file_count' => count($zipFiles),
                             ]);
-                            
+
                             foreach ($zipFiles as $file) {
                                 $backups[] = [
                                     'name' => basename($file),
@@ -329,7 +330,7 @@ class BackupService
                 }
             }
         } catch (\Exception $e) {
-            Log::error('Failed to get local backups: ' . $e->getMessage(), [
+            Log::error('Failed to get local backups: '.$e->getMessage(), [
                 'exception' => $e,
                 'backup_name' => $this->settings->backup_name ?? 'unknown',
             ]);
@@ -341,7 +342,7 @@ class BackupService
                 $googleBackups = $this->getGoogleDriveBackups();
                 $backups = array_merge($backups, $googleBackups);
             } catch (\Exception $e) {
-                Log::error('Failed to get Google Drive backups: ' . $e->getMessage());
+                Log::error('Failed to get Google Drive backups: '.$e->getMessage());
             }
         }
 
@@ -359,11 +360,11 @@ class BackupService
     protected function getGoogleDriveBackups(): array
     {
         $credentials = $this->settings->getGoogleDriveCredentials();
-        if (!$credentials) {
+        if (! $credentials) {
             return [];
         }
 
-        $client = new Client();
+        $client = new Client;
         $client->setAuthConfig($credentials);
         $client->addScope(Drive::DRIVE);
 
@@ -404,17 +405,18 @@ class BackupService
                 return $this->deleteGoogleDriveBackup($path);
             } else {
                 Storage::disk($disk)->delete($path);
+
                 return [
                     'success' => true,
                     'message' => 'Backup eliminado exitosamente.',
                 ];
             }
         } catch (\Exception $e) {
-            Log::error("Failed to delete backup {$path} from {$disk}: " . $e->getMessage());
-            
+            Log::error("Failed to delete backup {$path} from {$disk}: ".$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => 'Error al eliminar backup: ' . $e->getMessage(),
+                'message' => 'Error al eliminar backup: '.$e->getMessage(),
             ];
         }
     }
@@ -425,14 +427,14 @@ class BackupService
     protected function deleteGoogleDriveBackup(string $fileId): array
     {
         $credentials = $this->settings->getGoogleDriveCredentials();
-        if (!$credentials) {
+        if (! $credentials) {
             return [
                 'success' => false,
                 'message' => 'No se pudieron cargar las credenciales de Google Drive.',
             ];
         }
 
-        $client = new Client();
+        $client = new Client;
         $client->setAuthConfig($credentials);
         $client->addScope(Drive::DRIVE);
 
@@ -455,6 +457,7 @@ class BackupService
                 return $this->downloadGoogleDriveBackup($path);
             } else {
                 $content = Storage::disk($disk)->get($path);
+
                 return [
                     'success' => true,
                     'content' => $content,
@@ -462,11 +465,11 @@ class BackupService
                 ];
             }
         } catch (\Exception $e) {
-            Log::error("Failed to download backup {$path} from {$disk}: " . $e->getMessage());
-            
+            Log::error("Failed to download backup {$path} from {$disk}: ".$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => 'Error al descargar backup: ' . $e->getMessage(),
+                'message' => 'Error al descargar backup: '.$e->getMessage(),
             ];
         }
     }
@@ -477,22 +480,22 @@ class BackupService
     protected function downloadGoogleDriveBackup(string $fileId): array
     {
         $credentials = $this->settings->getGoogleDriveCredentials();
-        if (!$credentials) {
+        if (! $credentials) {
             return [
                 'success' => false,
                 'message' => 'No se pudieron cargar las credenciales de Google Drive.',
             ];
         }
 
-        $client = new Client();
+        $client = new Client;
         $client->setAuthConfig($credentials);
         $client->addScope(Drive::DRIVE);
 
         $service = new Drive($client);
-        
+
         // Get file metadata
         $file = $service->files->get($fileId, ['fields' => 'name']);
-        
+
         // Download file content
         $content = $service->files->get($fileId, ['alt' => 'media']);
 
@@ -525,11 +528,11 @@ class BackupService
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('Backup cleanup failed: ' . $e->getMessage());
-            
+            Log::error('Backup cleanup failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => 'Error al limpiar backups: ' . $e->getMessage(),
+                'message' => 'Error al limpiar backups: '.$e->getMessage(),
             ];
         }
     }
@@ -540,7 +543,7 @@ class BackupService
     public function getBackupStatistics(): array
     {
         $backups = $this->getBackupList();
-        
+
         $stats = [
             'total_backups' => count($backups),
             'total_size' => 0,
@@ -558,7 +561,7 @@ class BackupService
             $stats['by_disk'][$backup['disk']]['size'] += $backup['size'];
         }
 
-        if (!empty($backups)) {
+        if (! empty($backups)) {
             $stats['latest_backup'] = $backups[0]['date'];
             $stats['oldest_backup'] = end($backups)['date'];
         }
@@ -573,20 +576,21 @@ class BackupService
     {
         try {
             $backups = $this->getBackupList();
-            
+
             if (empty($backups)) {
                 return [];
             }
-            
+
             $latest = $backups[0]; // Already sorted by date (newest first)
-            
+
             return [
                 'size' => $latest['size'],
                 'files_count' => null, // Would need to extract from backup content
                 'databases_count' => 1, // Based on configuration
             ];
         } catch (\Exception $e) {
-            Log::warning('Failed to get latest backup info: ' . $e->getMessage());
+            Log::warning('Failed to get latest backup info: '.$e->getMessage());
+
             return [];
         }
     }
@@ -607,7 +611,7 @@ class BackupService
         try {
             if ($disk === 'local') {
                 // For local files, check if file exists and is readable
-                if (!Storage::disk($disk)->exists($path)) {
+                if (! Storage::disk($disk)->exists($path)) {
                     return [
                         'success' => false,
                         'message' => 'El archivo de backup no existe.',
@@ -639,22 +643,22 @@ class BackupService
             } elseif ($disk === 'google') {
                 // For Google Drive, verify file exists and get metadata
                 $credentials = $this->settings->getGoogleDriveCredentials();
-                if (!$credentials) {
+                if (! $credentials) {
                     return [
                         'success' => false,
                         'message' => 'No se pudieron cargar las credenciales de Google Drive.',
                     ];
                 }
 
-                $client = new Client();
+                $client = new Client;
                 $client->setAuthConfig($credentials);
                 $client->addScope(Drive::DRIVE);
 
                 $service = new Drive($client);
-                
+
                 try {
                     $file = $service->files->get($path, ['fields' => 'id,name,size,mimeType']);
-                    
+
                     if ($file->getSize() == 0) {
                         return [
                             'success' => false,
@@ -671,7 +675,7 @@ class BackupService
                 } catch (\Exception $e) {
                     return [
                         'success' => false,
-                        'message' => 'Error al verificar el archivo en Google Drive: ' . $e->getMessage(),
+                        'message' => 'Error al verificar el archivo en Google Drive: '.$e->getMessage(),
                     ];
                 }
             }
@@ -681,11 +685,11 @@ class BackupService
                 'message' => 'Tipo de almacenamiento no soportado.',
             ];
         } catch (\Exception $e) {
-            Log::error("Failed to validate backup integrity for {$disk}:{$path}: " . $e->getMessage());
-            
+            Log::error("Failed to validate backup integrity for {$disk}:{$path}: ".$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => 'Error al validar la integridad del backup: ' . $e->getMessage(),
+                'message' => 'Error al validar la integridad del backup: '.$e->getMessage(),
             ];
         }
     }

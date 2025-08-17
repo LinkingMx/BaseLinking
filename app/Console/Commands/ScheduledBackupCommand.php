@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\EmailConfiguration;
 use App\Services\BackupService;
 use App\Settings\BackupSettings;
-use App\Models\EmailConfiguration;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -29,8 +29,9 @@ class ScheduledBackupCommand extends Command
      */
     public function handle(BackupService $backupService, BackupSettings $settings): int
     {
-        if (!$settings->schedule_enabled) {
+        if (! $settings->schedule_enabled) {
             $this->info('Scheduled backups are disabled.');
+
             return self::SUCCESS;
         }
 
@@ -45,25 +46,26 @@ class ScheduledBackupCommand extends Command
         if ($result['success']) {
             $this->info('Backup completed successfully.');
             Log::info('Scheduled backup completed successfully');
-            
+
             // Clean old backups if enabled
             if ($settings->delete_old_backups_enabled) {
                 $this->info('Cleaning old backups...');
                 $cleanResult = $backupService->cleanOldBackups();
-                
+
                 if ($cleanResult['success']) {
                     $this->info('Old backups cleaned successfully.');
                     Log::info('Old backups cleaned successfully');
                 } else {
-                    $this->error('Failed to clean old backups: ' . $cleanResult['message']);
-                    Log::error('Failed to clean old backups: ' . $cleanResult['message']);
+                    $this->error('Failed to clean old backups: '.$cleanResult['message']);
+                    Log::error('Failed to clean old backups: '.$cleanResult['message']);
                 }
             }
-            
+
             return self::SUCCESS;
         } else {
-            $this->error('Backup failed: ' . $result['message']);
-            Log::error('Scheduled backup failed: ' . $result['message']);
+            $this->error('Backup failed: '.$result['message']);
+            Log::error('Scheduled backup failed: '.$result['message']);
+
             return self::FAILURE;
         }
     }
@@ -77,18 +79,18 @@ class ScheduledBackupCommand extends Command
             $activeConfig = EmailConfiguration::getActive();
             if ($activeConfig) {
                 $activeConfig->applyConfiguration();
-                $this->info('Applied email configuration: ' . $activeConfig->name);
+                $this->info('Applied email configuration: '.$activeConfig->name);
                 Log::info('Applied email configuration for scheduled backup', [
                     'config_name' => $activeConfig->name,
-                    'driver' => $activeConfig->driver
+                    'driver' => $activeConfig->driver,
                 ]);
             } else {
                 $this->warn('No active email configuration found');
                 Log::warning('No active email configuration found for scheduled backup');
             }
         } catch (\Exception $e) {
-            $this->error('Failed to apply email configuration: ' . $e->getMessage());
-            Log::error('Failed to apply email configuration for scheduled backup: ' . $e->getMessage());
+            $this->error('Failed to apply email configuration: '.$e->getMessage());
+            Log::error('Failed to apply email configuration for scheduled backup: '.$e->getMessage());
         }
     }
 }

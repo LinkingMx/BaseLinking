@@ -15,7 +15,7 @@ class ModelIntrospectionService
      */
     public function getModelInfo(string $modelClass): array
     {
-        if (!class_exists($modelClass) || !is_subclass_of($modelClass, Model::class)) {
+        if (! class_exists($modelClass) || ! is_subclass_of($modelClass, Model::class)) {
             throw new \InvalidArgumentException("La clase {$modelClass} no es un modelo Eloquent válido");
         }
 
@@ -46,16 +46,16 @@ class ModelIntrospectionService
     {
         $models = [];
         $modelPath = app_path('Models');
-        
-        if (!is_dir($modelPath)) {
+
+        if (! is_dir($modelPath)) {
             return $models;
         }
 
-        $files = glob($modelPath . '/*.php');
+        $files = glob($modelPath.'/*.php');
 
         foreach ($files as $file) {
-            $className = 'App\\Models\\' . pathinfo($file, PATHINFO_FILENAME);
-            
+            $className = 'App\\Models\\'.pathinfo($file, PATHINFO_FILENAME);
+
             if (class_exists($className) && is_subclass_of($className, Model::class)) {
                 try {
                     $model = new $className;
@@ -82,7 +82,7 @@ class ModelIntrospectionService
     {
         $tableName = $model->getTable();
         $columns = Schema::getColumns($tableName);
-        
+
         return collect($columns)->map(function ($column) {
             return [
                 'name' => $column['name'],
@@ -101,12 +101,12 @@ class ModelIntrospectionService
     {
         $relations = [];
         $relationTypes = [
-            'hasOne', 'hasMany', 'belongsTo', 'belongsToMany', 
-            'morphTo', 'morphOne', 'morphMany', 'morphToMany'
+            'hasOne', 'hasMany', 'belongsTo', 'belongsToMany',
+            'morphTo', 'morphOne', 'morphMany', 'morphToMany',
         ];
 
         foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->class !== $reflection->getName() || 
+            if ($method->class !== $reflection->getName() ||
                 $method->getNumberOfParameters() > 0 ||
                 Str::startsWith($method->getName(), '_')) {
                 continue;
@@ -116,7 +116,7 @@ class ModelIntrospectionService
                 $returnType = $method->getReturnType();
                 if ($returnType && $returnType->getName()) {
                     $relationClass = $returnType->getName();
-                    
+
                     // Check if it's an Eloquent relation
                     foreach ($relationTypes as $relationType) {
                         if (Str::contains($relationClass, $relationType)) {
@@ -187,7 +187,7 @@ class ModelIntrospectionService
     {
         $dates = [];
         $casts = $model->getCasts();
-        
+
         foreach ($casts as $field => $cast) {
             if (in_array($cast, ['datetime', 'date', 'timestamp'])) {
                 $dates[] = $field;
@@ -212,7 +212,7 @@ class ModelIntrospectionService
         $fields = $this->getModelFields($model);
 
         foreach ($fields as $field) {
-            if (Str::endsWith($field['name'], ['_by', '_user_id']) || 
+            if (Str::endsWith($field['name'], ['_by', '_user_id']) ||
                 Str::contains($field['name'], ['user', 'creator', 'editor', 'approver'])) {
                 $userFields[] = $field['name'];
             }
@@ -228,7 +228,7 @@ class ModelIntrospectionService
     {
         $variables = [];
         $modelName = strtolower(class_basename($reflection->getName()));
-        
+
         // Variables básicas del modelo
         $fields = $this->getModelFields($model);
         foreach ($fields as $field) {
@@ -251,18 +251,18 @@ class ModelIntrospectionService
 
         // Variables de estado
         $statuses = $this->getModelStatuses($reflection);
-        if (!empty($statuses)) {
+        if (! empty($statuses)) {
             $variables["{$modelName}_status_description"] = [
                 'key' => "{$modelName}_status_description",
-                'description' => "Descripción legible del estado",
+                'description' => 'Descripción legible del estado',
                 'type' => 'string',
                 'category' => 'model_status',
                 'example' => 'Publicado, Borrador, etc.',
             ];
-            
+
             $variables["{$modelName}_status_color"] = [
                 'key' => "{$modelName}_status_color",
-                'description' => "Color asociado al estado",
+                'description' => 'Color asociado al estado',
                 'type' => 'string',
                 'category' => 'model_status',
                 'example' => 'success, warning, danger',
@@ -279,7 +279,7 @@ class ModelIntrospectionService
                 'category' => 'date_formatted',
                 'example' => '04/08/2025 15:30',
             ];
-            
+
             $variables["{$dateField}_human"] = [
                 'key' => "{$dateField}_human",
                 'description' => "Fecha {$dateField} en formato humano",
@@ -293,11 +293,11 @@ class ModelIntrospectionService
         $variables["{$modelName}_url"] = [
             'key' => "{$modelName}_url",
             'description' => "URL para ver el {$modelName}",
-            'type' => 'string', 
+            'type' => 'string',
             'category' => 'url',
             'example' => 'https://app.com/admin/documentations/123',
         ];
-        
+
         $variables["{$modelName}_edit_url"] = [
             'key' => "{$modelName}_edit_url",
             'description' => "URL para editar el {$modelName}",
@@ -319,7 +319,7 @@ class ModelIntrospectionService
     {
         $relationName = $relation['name'];
         $relationType = $relation['type'];
-        
+
         // Para relaciones singulares (belongsTo, hasOne)
         if (Str::contains($relationType, ['belongsTo', 'hasOne'])) {
             $variables["{$relationName}_id"] = [
@@ -329,7 +329,7 @@ class ModelIntrospectionService
                 'category' => 'relation_id',
                 'example' => '123',
             ];
-            
+
             $variables["{$relationName}_name"] = [
                 'key' => "{$relationName}_name",
                 'description' => "Nombre del {$relationName}",
@@ -337,16 +337,16 @@ class ModelIntrospectionService
                 'category' => 'relation_field',
                 'example' => 'Juan Pérez',
             ];
-            
+
             // Si es relación con User, agregar campos específicos
             if ($this->isUserRelation($relation, $model)) {
                 $this->addUserRelationVariables($variables, $relationName);
             }
-            
+
             // Si es relación con otros modelos conocidos, agregar campos específicos
             $this->addKnownModelRelationVariables($variables, $relation, $relationName);
         }
-        
+
         // Para relaciones múltiples (hasMany, belongsToMany)
         elseif (Str::contains($relationType, ['hasMany', 'belongsToMany'])) {
             $variables["{$relationName}_count"] = [
@@ -356,7 +356,7 @@ class ModelIntrospectionService
                 'category' => 'relation_count',
                 'example' => '5',
             ];
-            
+
             $variables["{$relationName}_list"] = [
                 'key' => "{$relationName}_list",
                 'description' => "Lista de nombres de {$relationName}",
@@ -373,13 +373,13 @@ class ModelIntrospectionService
     protected function isUserRelation(array $relation, Model $model): bool
     {
         try {
-            if (!method_exists($model, $relation['name'])) {
+            if (! method_exists($model, $relation['name'])) {
                 return false;
             }
-            
+
             $relationInstance = $model->{$relation['name']}();
             $relatedModel = $relationInstance->getRelated();
-            
+
             return $relatedModel instanceof \App\Models\User;
         } catch (\Exception $e) {
             return false;
@@ -392,11 +392,11 @@ class ModelIntrospectionService
     protected function addUserRelationVariables(array &$variables, string $relationName): void
     {
         $userFields = ['email', 'phone', 'department', 'position', 'avatar_url'];
-        
+
         foreach ($userFields as $field) {
             $variables["{$relationName}_{$field}"] = [
                 'key' => "{$relationName}_{$field}",
-                'description' => ucfirst($field) . " del {$relationName}",
+                'description' => ucfirst($field)." del {$relationName}",
                 'type' => 'string',
                 'category' => 'user_field',
                 'example' => $this->getUserFieldExample($field),
@@ -419,12 +419,12 @@ class ModelIntrospectionService
 
         $relationClass = $relation['class'] ?? '';
         $modelName = class_basename($relationClass);
-        
+
         if (isset($knownModels[$modelName])) {
             foreach ($knownModels[$modelName] as $field) {
                 $variables["{$relationName}_{$field}"] = [
                     'key' => "{$relationName}_{$field}",
-                    'description' => ucfirst($field) . " del {$relationName}",
+                    'description' => ucfirst($field)." del {$relationName}",
                     'type' => 'string',
                     'category' => 'known_model_field',
                     'example' => $this->getKnownModelFieldExample($modelName, $field),
@@ -468,7 +468,7 @@ class ModelIntrospectionService
      */
     protected function getFieldExample(array $field): string
     {
-        return match($field['type']) {
+        return match ($field['type']) {
             'varchar', 'text' => 'Texto de ejemplo',
             'integer', 'bigint' => '123',
             'boolean' => 'true/false',
@@ -484,7 +484,7 @@ class ModelIntrospectionService
      */
     protected function getUserFieldExample(string $field): string
     {
-        return match($field) {
+        return match ($field) {
             'email' => 'usuario@ejemplo.com',
             'phone' => '+34 123 456 789',
             'department' => 'Desarrollo',
@@ -499,14 +499,14 @@ class ModelIntrospectionService
      */
     protected function getKnownModelFieldExample(string $modelName, string $field): string
     {
-        return match($modelName) {
-            'Documentation' => match($field) {
+        return match ($modelName) {
+            'Documentation' => match ($field) {
                 'title' => 'Manual de Usuario',
                 'status' => 'published',
                 'description' => 'Descripción del documento',
                 default => 'valor'
             },
-            'Department' => match($field) {
+            'Department' => match ($field) {
                 'name' => 'Desarrollo',
                 'code' => 'DEV',
                 'manager_id' => '123',
@@ -521,7 +521,7 @@ class ModelIntrospectionService
      */
     protected function getContextVariableExample(string $key): string
     {
-        return match($key) {
+        return match ($key) {
             'workflow_name' => 'Gestión de Documentos',
             'workflow_step' => 'Notificar Creación',
             'workflow_step_order' => '1',
@@ -543,10 +543,10 @@ class ModelIntrospectionService
     protected function getModelDisplayName(string $modelClass): string
     {
         $basename = class_basename($modelClass);
-        
+
         // Convertir CamelCase a palabras
         $words = preg_split('/(?=[A-Z])/', $basename, -1, PREG_SPLIT_NO_EMPTY);
-        
+
         return implode(' ', $words);
     }
 
@@ -556,7 +556,7 @@ class ModelIntrospectionService
     public function detectFieldChanges(Model $model, array $watchedFields = []): array
     {
         $changes = [];
-        
+
         if (empty($watchedFields)) {
             $watchedFields = array_keys($this->getModelFields($model));
         }
@@ -616,7 +616,7 @@ class ModelIntrospectionService
                 case 'conditional':
                     // Condición basada en valores del modelo
                     if ($this->evaluateCondition($model, $rule['condition'])) {
-                        $recipients = array_merge($recipients, 
+                        $recipients = array_merge($recipients,
                             $this->getDynamicRecipients($model, $rule['then_recipients'])
                         );
                     }
@@ -645,7 +645,7 @@ class ModelIntrospectionService
             '>=' => $modelValue >= $value,
             '<=' => $modelValue <= $value,
             'in' => in_array($modelValue, (array) $value),
-            'not_in' => !in_array($modelValue, (array) $value),
+            'not_in' => ! in_array($modelValue, (array) $value),
             'contains' => Str::contains($modelValue, $value),
             'starts_with' => Str::startsWith($modelValue, $value),
             'ends_with' => Str::endsWith($modelValue, $value),

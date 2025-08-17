@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Mail\TestEmail;
 use App\Models\EmailConfiguration;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Grid;
@@ -17,32 +18,36 @@ use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use App\Mail\TestEmail;
-use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\HtmlString;
 
 class EmailSettings extends Page implements HasForms
 {
     use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
+
     protected static string $view = 'filament.pages.email-settings';
+
     protected static ?string $title = 'Configuración de Email';
+
     protected static ?string $navigationLabel = 'Configuración de Email';
+
     protected static ?string $navigationGroup = 'Correo';
+
     protected static ?int $navigationSort = 3;
-    
+
     protected static bool $shouldRegisterNavigation = false;
 
     public ?array $data = [];
+
     public ?string $testEmail = '';
+
     public ?string $testResult = '';
 
     public function mount(): void
     {
         $activeConfig = EmailConfiguration::getActive();
-        
+
         if ($activeConfig) {
             $this->form->fill([
                 'name' => $activeConfig->name,
@@ -71,12 +76,12 @@ class EmailSettings extends Page implements HasForms
                                     ->required()
                                     ->maxLength(255)
                                     ->placeholder('Mi configuración SMTP'),
-                                
+
                                 Toggle::make('is_active')
                                     ->label('Activar esta configuración')
                                     ->helperText('Solo una configuración puede estar activa a la vez'),
                             ]),
-                        
+
                         Select::make('driver')
                             ->label('Proveedor de Email')
                             ->required()
@@ -99,14 +104,14 @@ class EmailSettings extends Page implements HasForms
                                     ->label('Servidor SMTP')
                                     ->required()
                                     ->placeholder('smtp.gmail.com'),
-                                
+
                                 TextInput::make('port')
                                     ->label('Puerto')
                                     ->required()
                                     ->numeric()
                                     ->default(587),
                             ]),
-                        
+
                         Grid::make(2)
                             ->schema([
                                 Select::make('encryption')
@@ -117,12 +122,12 @@ class EmailSettings extends Page implements HasForms
                                         '' => 'Ninguna',
                                     ])
                                     ->default('tls'),
-                                
+
                                 TextInput::make('username')
                                     ->label('Usuario')
                                     ->required(),
                             ]),
-                        
+
                         TextInput::make('password')
                             ->label('Contraseña')
                             ->password()
@@ -136,12 +141,12 @@ class EmailSettings extends Page implements HasForms
                             ->label('Dominio')
                             ->required()
                             ->placeholder('mg.example.com'),
-                        
+
                         TextInput::make('secret')
                             ->label('API Key')
                             ->password()
                             ->required(),
-                        
+
                         TextInput::make('endpoint')
                             ->label('Endpoint')
                             ->default('api.mailgun.net')
@@ -163,12 +168,12 @@ class EmailSettings extends Page implements HasForms
                         TextInput::make('key')
                             ->label('Access Key ID')
                             ->required(),
-                        
+
                         TextInput::make('secret')
                             ->label('Secret Access Key')
                             ->password()
                             ->required(),
-                        
+
                         Select::make('region')
                             ->label('Región')
                             ->options([
@@ -203,7 +208,7 @@ class EmailSettings extends Page implements HasForms
                                     ->email()
                                     ->required()
                                     ->placeholder('noreply@example.com'),
-                                
+
                                 TextInput::make('from_name')
                                     ->label('Nombre del remitente')
                                     ->required()
@@ -218,7 +223,7 @@ class EmailSettings extends Page implements HasForms
                             ->email()
                             ->placeholder('test@example.com')
                             ->helperText('Ingresa un email válido para enviar una prueba'),
-                        
+
                         View::make('filament.components.test-result')
                             ->viewData([
                                 'result' => $this->testResult,
@@ -234,7 +239,7 @@ class EmailSettings extends Page implements HasForms
             Action::make('save')
                 ->label('Guardar Configuración')
                 ->submit('save'),
-            
+
             Action::make('test')
                 ->label('Probar Conexión')
                 ->color('warning')
@@ -249,7 +254,7 @@ class EmailSettings extends Page implements HasForms
     public function save(): void
     {
         $data = $this->form->getState();
-        
+
         // Separate configuration data from form data
         $configData = [
             'name' => $data['name'],
@@ -271,7 +276,7 @@ class EmailSettings extends Page implements HasForms
                     'from_name' => $data['from_name'],
                 ];
                 break;
-            
+
             case 'mailgun':
                 $settings = [
                     'domain' => $data['domain'],
@@ -281,7 +286,7 @@ class EmailSettings extends Page implements HasForms
                     'from_name' => $data['from_name'],
                 ];
                 break;
-            
+
             case 'postmark':
                 $settings = [
                     'token' => $data['token'],
@@ -289,7 +294,7 @@ class EmailSettings extends Page implements HasForms
                     'from_name' => $data['from_name'],
                 ];
                 break;
-            
+
             case 'ses':
                 $settings = [
                     'key' => $data['key'],
@@ -299,7 +304,7 @@ class EmailSettings extends Page implements HasForms
                     'from_name' => $data['from_name'],
                 ];
                 break;
-            
+
             case 'sendmail':
                 $settings = [
                     'path' => $data['path'],
@@ -313,7 +318,7 @@ class EmailSettings extends Page implements HasForms
 
         // Find existing active configuration or create new
         $activeConfig = EmailConfiguration::getActive();
-        
+
         if ($activeConfig) {
             $activeConfig->update($configData);
             $config = $activeConfig;
@@ -336,21 +341,22 @@ class EmailSettings extends Page implements HasForms
     public function testConnection(): void
     {
         $data = $this->form->getState();
-        
+
         if (empty($this->testEmail)) {
             Notification::make()
                 ->danger()
                 ->title('Error')
                 ->body('Por favor ingresa un email de prueba válido.')
                 ->send();
+
             return;
         }
 
         try {
             // Create a temporary configuration to test
-            $tempConfig = new EmailConfiguration();
+            $tempConfig = new EmailConfiguration;
             $tempConfig->driver = $data['driver'];
-            
+
             // Prepare settings
             $settings = [];
             switch ($data['driver']) {
@@ -365,7 +371,7 @@ class EmailSettings extends Page implements HasForms
                         'from_name' => $data['from_name'],
                     ];
                     break;
-                
+
                 case 'mailgun':
                     $settings = [
                         'domain' => $data['domain'],
@@ -375,7 +381,7 @@ class EmailSettings extends Page implements HasForms
                         'from_name' => $data['from_name'],
                     ];
                     break;
-                
+
                 case 'postmark':
                     $settings = [
                         'token' => $data['token'],
@@ -383,7 +389,7 @@ class EmailSettings extends Page implements HasForms
                         'from_name' => $data['from_name'],
                     ];
                     break;
-                
+
                 case 'ses':
                     $settings = [
                         'key' => $data['key'],
@@ -393,7 +399,7 @@ class EmailSettings extends Page implements HasForms
                         'from_name' => $data['from_name'],
                     ];
                     break;
-                
+
                 case 'sendmail':
                     $settings = [
                         'path' => $data['path'],
@@ -404,17 +410,17 @@ class EmailSettings extends Page implements HasForms
             }
 
             $tempConfig->settings = $settings;
-            
+
             // Apply configuration temporarily
             $tempConfig->applyConfiguration();
-            
+
             // Send test email using the TestEmail mailable
             Mail::to($this->testEmail)->send(new TestEmail(
                 'Este es un email de prueba enviado desde la configuración de email del sistema. Si recibes este mensaje, la configuración está funcionando correctamente.'
             ));
 
             $this->testResult = 'success';
-            
+
             // If we have an existing configuration, mark it as tested
             $activeConfig = EmailConfiguration::getActive();
             if ($activeConfig) {
@@ -429,11 +435,11 @@ class EmailSettings extends Page implements HasForms
 
         } catch (\Exception $e) {
             $this->testResult = 'error';
-            
+
             Notification::make()
                 ->danger()
                 ->title('Error al enviar email')
-                ->body('No se pudo enviar el email de prueba: ' . $e->getMessage())
+                ->body('No se pudo enviar el email de prueba: '.$e->getMessage())
                 ->send();
         }
     }

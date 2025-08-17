@@ -14,6 +14,7 @@ class ApprovalState extends Model
         'description',
         'color',
         'icon',
+        'state_class',
         'is_initial',
         'is_final',
         'requires_approval',

@@ -8,12 +8,12 @@ return [
     'force_2fa' => false,
     'enable_sanctum_tokens' => true,
     'enable_session_management' => true,
-    
+
     'profile_page_group' => null,
     'profile_page_icon' => 'heroicon-o-user-circle',
     'profile_page_navigation_label' => 'Mi Perfil',
     'profile_page_navigation_sort' => null,
-    
+
     'password_rules' => [
         'required',
         'string',
@@ -21,10 +21,10 @@ return [
         'confirmed',
         'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
     ],
-    
+
     'sanctum_permissions' => [
         'create' => 'Crear',
-        'read' => 'Leer', 
+        'read' => 'Leer',
         'update' => 'Actualizar',
         'delete' => 'Eliminar',
     ],

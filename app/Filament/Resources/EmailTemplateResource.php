@@ -3,17 +3,14 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\EmailTemplateResource\Pages;
-use App\Filament\Resources\EmailTemplateResource\RelationManagers;
 use App\Models\EmailTemplate;
-use App\Settings\EmailTemplateSettings;
 use App\Services\ModelIntrospectionService;
+use App\Settings\EmailTemplateSettings;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Mohamedsabil83\FilamentFormsTinyeditor\Components\TinyEditor;
 
 class EmailTemplateResource extends Resource
@@ -21,24 +18,24 @@ class EmailTemplateResource extends Resource
     protected static ?string $model = EmailTemplate::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
-    
+
     protected static ?string $navigationGroup = 'Correo';
-    
+
     // Templates de documentación disponibles
     protected static bool $shouldRegisterNavigation = true;
-    
+
     protected static ?string $navigationLabel = 'Templates de Email';
-    
+
     protected static ?string $modelLabel = 'Template de Email';
-    
+
     protected static ?string $pluralModelLabel = 'Templates de Email';
-    
+
     protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {
         $settings = app(EmailTemplateSettings::class);
-        
+
         return $form
             ->schema([
                 Forms\Components\Section::make('Información Básica')
@@ -51,14 +48,14 @@ class EmailTemplateResource extends Resource
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true)
                                     ->helperText('Identificador único del template (ej: backup-success)'),
-                                    
+
                                 Forms\Components\TextInput::make('name')
                                     ->label('Nombre')
                                     ->required()
                                     ->maxLength(255)
                                     ->helperText('Nombre descriptivo del template'),
                             ]),
-                            
+
                         Forms\Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\Select::make('language')
@@ -66,24 +63,24 @@ class EmailTemplateResource extends Resource
                                     ->required()
                                     ->options($settings->available_languages)
                                     ->default($settings->default_language),
-                                    
+
                                 Forms\Components\Toggle::make('is_active')
                                     ->label('Activo')
                                     ->default(true),
                             ]),
-                            
+
                         Forms\Components\Select::make('model_type')
                             ->label('Modelo Asociado')
                             ->placeholder('Selecciona un modelo (opcional)')
                             ->options(function () {
                                 $introspectionService = app(ModelIntrospectionService::class);
                                 $models = $introspectionService->getAvailableModels();
-                                
+
                                 $options = ['' => 'Sin modelo específico'];
                                 foreach ($models as $model) {
                                     $options[$model['class']] = $model['display_name'];
                                 }
-                                
+
                                 return $options;
                             })
                             ->searchable()
@@ -103,13 +100,13 @@ class EmailTemplateResource extends Resource
                                 }
                             })
                             ->helperText('Asocia este template a un modelo para acceder a sus variables dinámicas'),
-                            
+
                         Forms\Components\Textarea::make('description')
                             ->label('Descripción')
                             ->maxLength(500)
                             ->helperText('Descripción opcional del template'),
                     ]),
-                    
+
                 Forms\Components\Section::make('Contenido del Email')
                     ->schema([
                         Forms\Components\TextInput::make('subject')
@@ -126,6 +123,7 @@ class EmailTemplateResource extends Resource
                                     ->modalHeading('Variables para el Asunto')
                                     ->modalContent(function ($get) use ($settings) {
                                         $currentCategory = $get('category') ?? 'general';
+
                                         return view('filament.resources.email-template.variables-help', [
                                             'currentTemplate' => null,
                                             'globalVariables' => $settings->global_variables,
@@ -137,14 +135,14 @@ class EmailTemplateResource extends Resource
                                                 'documentation' => $settings->getCategoryVariables('documentation'),
                                                 'notification' => $settings->getCategoryVariables('notification'),
                                                 $currentCategory => $settings->getCategoryVariables($currentCategory),
-                                            ]
+                                            ],
                                         ]);
                                     })
                                     ->modalSubmitAction(false)
                                     ->modalCancelActionLabel('Cerrar')
                                     ->modalWidth('7xl'),
                             ]),
-                            
+
                         TinyEditor::make('content')
                             ->label('Contenido del Email')
                             ->required()
@@ -161,24 +159,24 @@ class EmailTemplateResource extends Resource
                                     ->modalContent(function (callable $get) {
                                         $modelType = $get('model_type');
                                         $settings = app(EmailTemplateSettings::class);
-                                        
+
                                         $html = '<div class="space-y-4">';
-                                        
+
                                         // Variables del modelo
                                         if ($modelType) {
                                             try {
                                                 $introspectionService = app(ModelIntrospectionService::class);
                                                 $modelInfo = $introspectionService->getModelInfo($modelType);
                                                 $modelVars = $modelInfo['available_variables'] ?? [];
-                                                
-                                                if (!empty($modelVars)) {
+
+                                                if (! empty($modelVars)) {
                                                     $html .= '<div class="mb-4">';
-                                                    $html .= '<h3 class="text-lg font-semibold mb-2">Variables del Modelo ' . class_basename($modelType) . ':</h3>';
+                                                    $html .= '<h3 class="text-lg font-semibold mb-2">Variables del Modelo '.class_basename($modelType).':</h3>';
                                                     $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">';
                                                     foreach ($modelVars as $var) {
                                                         $html .= '<div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">';
-                                                        $html .= '<code class="text-sm text-primary-600 dark:text-primary-400">{{' . $var['key'] . '}}</code>';
-                                                        $html .= '<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">' . $var['description'] . '</p>';
+                                                        $html .= '<code class="text-sm text-primary-600 dark:text-primary-400">{{'.$var['key'].'}}</code>';
+                                                        $html .= '<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">'.$var['description'].'</p>';
                                                         $html .= '</div>';
                                                     }
                                                     $html .= '</div></div>';
@@ -187,22 +185,22 @@ class EmailTemplateResource extends Resource
                                                 // Ignorar errores
                                             }
                                         }
-                                        
+
                                         // Variables globales
                                         $commonVars = $settings->getCommonVariables();
-                                        if (!empty($commonVars)) {
+                                        if (! empty($commonVars)) {
                                             $html .= '<div class="mb-4">';
                                             $html .= '<h3 class="text-lg font-semibold mb-2">Variables Globales:</h3>';
                                             $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">';
                                             foreach ($commonVars as $key => $description) {
                                                 $html .= '<div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">';
-                                                $html .= '<code class="text-sm text-primary-600 dark:text-primary-400">{{' . $key . '}}</code>';
-                                                $html .= '<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">' . $description . '</p>';
+                                                $html .= '<code class="text-sm text-primary-600 dark:text-primary-400">{{'.$key.'}}</code>';
+                                                $html .= '<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">'.$description.'</p>';
                                                 $html .= '</div>';
                                             }
                                             $html .= '</div></div>';
                                         }
-                                        
+
                                         // Ejemplos de formateo
                                         $html .= '<div class="mt-4 pt-4 border-t">';
                                         $html .= '<h3 class="text-lg font-semibold mb-2">Formateo de Variables:</h3>';
@@ -212,15 +210,15 @@ class EmailTemplateResource extends Resource
                                         $html .= '<div><code>{{name|upper}}</code> → Texto en mayúsculas</div>';
                                         $html .= '<div><code>{{user.profile.name}}</code> → Variables anidadas</div>';
                                         $html .= '</div></div>';
-                                        
+
                                         $html .= '</div>';
-                                        
+
                                         return new \Illuminate\Support\HtmlString($html);
                                     })
                                     ->modalWidth('4xl')
-                            )
+                            ),
                     ]),
-                    
+
                 Forms\Components\Section::make('Variables y Configuración')
                     ->schema([
                         Forms\Components\KeyValue::make('variables')
@@ -228,62 +226,61 @@ class EmailTemplateResource extends Resource
                             ->keyLabel('Variable')
                             ->valueLabel('Descripción')
                             ->helperText('Define variables específicas para este template además de las del modelo'),
-                            
+
                         Forms\Components\Hidden::make('model_variables'),
-                        
+
                         Forms\Components\Placeholder::make('dynamic_variables_info')
                             ->label('Variables Dinámicas Disponibles')
                             ->content(function (callable $get) use ($settings) {
                                 $modelType = $get('model_type');
-                                
+
                                 $html = '<div class="space-y-4">';
-                                
+
                                 // Variables del modelo
                                 if ($modelType) {
                                     try {
                                         $introspectionService = app(ModelIntrospectionService::class);
                                         $modelInfo = $introspectionService->getModelInfo($modelType);
                                         $modelVars = $modelInfo['available_variables'] ?? [];
-                                        
-                                        if (!empty($modelVars)) {
+
+                                        if (! empty($modelVars)) {
                                             $html .= '<div>';
-                                            $html .= '<h4 class="font-medium text-sm mb-2">Variables del Modelo ' . class_basename($modelType) . ':</h4>';
+                                            $html .= '<h4 class="font-medium text-sm mb-2">Variables del Modelo '.class_basename($modelType).':</h4>';
                                             $html .= '<div class="grid grid-cols-2 gap-2">';
-                                            
+
                                             foreach ($modelVars as $var) {
                                                 $html .= '<div class="text-xs">';
-                                                $html .= '<code class="text-primary-600">{{' . $var['key'] . '}}</code>';
-                                                $html .= ' - ' . $var['description'];
+                                                $html .= '<code class="text-primary-600">{{'.$var['key'].'}}</code>';
+                                                $html .= ' - '.$var['description'];
                                                 $html .= '</div>';
                                             }
-                                            
+
                                             $html .= '</div></div>';
                                         }
                                     } catch (\Exception $e) {
                                         // Ignorar errores
                                     }
                                 }
-                                
+
                                 // Variables comunes
                                 $commonVars = $settings->getCommonVariables();
-                                if (!empty($commonVars)) {
+                                if (! empty($commonVars)) {
                                     $html .= '<div>';
                                     $html .= '<h4 class="font-medium text-sm mb-2">Variables Globales:</h4>';
                                     $html .= '<div class="grid grid-cols-2 gap-2">';
-                                    
+
                                     foreach ($commonVars as $key => $description) {
                                         $html .= '<div class="text-xs">';
-                                        $html .= '<code class="text-primary-600">{{' . $key . '}}</code>';
-                                        $html .= ' - ' . $description;
+                                        $html .= '<code class="text-primary-600">{{'.$key.'}}</code>';
+                                        $html .= ' - '.$description;
                                         $html .= '</div>';
                                     }
-                                    
+
                                     $html .= '</div></div>';
                                 }
-                                
-                                
+
                                 $html .= '</div>';
-                                
+
                                 return new \Illuminate\Support\HtmlString($html);
                             }),
                     ])
@@ -300,37 +297,37 @@ class EmailTemplateResource extends Resource
                     ->label('Nombre')
                     ->searchable()
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('key')
                     ->label('Clave')
                     ->searchable()
                     ->sortable()
                     ->copyable(),
-                    
+
                 Tables\Columns\TextColumn::make('model_type')
                     ->label('Modelo')
                     ->formatStateUsing(fn ($state) => $state ? class_basename($state) : '-')
                     ->badge()
                     ->color('info')
                     ->searchable(),
-                    
+
                 Tables\Columns\BadgeColumn::make('language')
                     ->label('Idioma')
                     ->colors([
                         'success' => 'es',
                         'info' => 'en',
                     ]),
-                    
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Activo')
                     ->boolean(),
-                    
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creado')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Actualizado')
                     ->dateTime()
@@ -343,22 +340,22 @@ class EmailTemplateResource extends Resource
                     ->options(function () {
                         $introspectionService = app(ModelIntrospectionService::class);
                         $models = $introspectionService->getAvailableModels();
-                        
+
                         $options = ['' => 'Sin modelo específico'];
                         foreach ($models as $model) {
                             $options[$model['class']] = $model['display_name'];
                         }
-                        
+
                         return $options;
                     }),
-                    
+
                 Tables\Filters\SelectFilter::make('language')
                     ->label('Idioma')
                     ->options([
                         'es' => 'Español',
                         'en' => 'English',
                     ]),
-                    
+
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Estado')
                     ->placeholder('Todos')
@@ -386,7 +383,7 @@ class EmailTemplateResource extends Resource
                         'currentTemplate' => $record,
                         'globalVariables' => app(\App\Settings\EmailTemplateSettings::class)->global_variables,
                         'commonVariables' => app(\App\Settings\EmailTemplateSettings::class)->getCommonVariables(),
-                        'modelVariables' => $record->getModelVariables()
+                        'modelVariables' => $record->getModelVariables(),
                     ]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Cerrar')
@@ -420,8 +417,8 @@ class EmailTemplateResource extends Resource
                         ->action(function ($records) {
                             $records->each(function ($record) {
                                 $newTemplate = $record->replicate();
-                                $newTemplate->key = $record->key . '_copy_' . uniqid();
-                                $newTemplate->name = $record->name . ' (Copia)';
+                                $newTemplate->key = $record->key.'_copy_'.uniqid();
+                                $newTemplate->name = $record->name.' (Copia)';
                                 $newTemplate->is_active = false;
                                 $newTemplate->save();
                             });

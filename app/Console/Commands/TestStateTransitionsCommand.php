@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
 class TestStateTransitionsCommand extends Command
 {
     protected $signature = 'test:state-transitions';
-    
+
     protected $description = 'Test the new state transition system';
 
     public function handle(): int
@@ -22,11 +22,11 @@ class TestStateTransitionsCommand extends Command
 
         // Verificar que los estados y transiciones existen
         $this->info('📊 Checking States and Transitions...');
-        
+
         $states = ApprovalState::where('model_type', 'App\\Models\\Documentation')->get();
         $this->table(
             ['Name', 'Label', 'Is Initial', 'Is Final', 'Requires Approval', 'Active'],
-            $states->map(fn($state) => [
+            $states->map(fn ($state) => [
                 $state->name,
                 $state->label,
                 $state->is_initial ? '✅' : '❌',
@@ -41,7 +41,7 @@ class TestStateTransitionsCommand extends Command
         $this->info('🔄 Available Transitions:');
         $this->table(
             ['From', 'To', 'Name', 'Label', 'Requires Permission', 'Active'],
-            $transitions->map(fn($t) => [
+            $transitions->map(fn ($t) => [
                 $t->fromState->label,
                 $t->toState->label,
                 $t->name,
@@ -54,10 +54,11 @@ class TestStateTransitionsCommand extends Command
         // Crear un documento de prueba
         $this->newLine();
         $this->info('📝 Creating test documentation...');
-        
+
         $user = User::first();
-        if (!$user) {
+        if (! $user) {
             $this->error('No users found. Please create a user first.');
+
             return 1;
         }
 
@@ -75,10 +76,10 @@ class TestStateTransitionsCommand extends Command
         // Verificar transiciones disponibles
         $stateService = app(StateTransitionService::class);
         $availableTransitions = $stateService->getAvailableTransitions($doc, $user);
-        
+
         $this->newLine();
         $this->info('⚡ Available Transitions:');
-        
+
         if (empty($availableTransitions)) {
             $this->warn('No transitions available');
         } else {
@@ -90,21 +91,21 @@ class TestStateTransitionsCommand extends Command
         }
 
         // Probar transición
-        if (!empty($availableTransitions)) {
+        if (! empty($availableTransitions)) {
             $this->newLine();
             $firstTransition = $availableTransitions[0]['transition'];
             $this->info("🚀 Executing transition: {$firstTransition->label}");
-            
+
             $success = $stateService->executeTransition($doc, $firstTransition, $user);
-            
+
             if ($success) {
                 $doc->refresh();
-                $this->info("✅ Transition executed successfully!");
+                $this->info('✅ Transition executed successfully!');
                 $newStateName = $doc->state ? $doc->state->getStateName() : 'null';
                 $this->info("New state: {$newStateName}");
                 $this->info("New status: {$doc->status}");
             } else {
-                $this->error("❌ Transition failed");
+                $this->error('❌ Transition failed');
             }
         }
 

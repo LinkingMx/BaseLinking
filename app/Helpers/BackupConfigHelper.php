@@ -16,13 +16,14 @@ class BackupConfigHelper
             // Check if we're in config loading phase or if settings are available
             if (app()->bound(BackupSettings::class)) {
                 $settings = app(BackupSettings::class);
+
                 return self::getDynamicConfig($settings);
             }
         } catch (\Exception $e) {
             // Fall back to default configuration if settings can't be loaded
-            Log::debug('Backup settings not available, using default config: ' . $e->getMessage());
+            Log::debug('Backup settings not available, using default config: '.$e->getMessage());
         }
-        
+
         return self::getDefaultConfig();
     }
 
@@ -32,44 +33,44 @@ class BackupConfigHelper
     public static function getDynamicConfig(BackupSettings $settings): array
     {
         $config = self::getDefaultConfig();
-        
+
         // Update backup name
-        if (!is_null($settings->backup_name) && !empty($settings->backup_name)) {
+        if (! is_null($settings->backup_name) && ! empty($settings->backup_name)) {
             $config['backup']['name'] = $settings->backup_name;
         }
-        
+
         // Configure what to include in backup
-        if (!$settings->include_files) {
+        if (! $settings->include_files) {
             $config['backup']['source']['files'] = [];
-        } elseif (!empty($settings->directories_to_backup)) {
+        } elseif (! empty($settings->directories_to_backup)) {
             $config['backup']['source']['files']['include'] = array_map(
-                fn($dir) => base_path($dir),
+                fn ($dir) => base_path($dir),
                 $settings->directories_to_backup
             );
         }
-        
+
         // Configure excluded directories
-        if (!empty($settings->exclude_directories)) {
+        if (! empty($settings->exclude_directories)) {
             $config['backup']['source']['files']['exclude'] = array_merge(
                 $config['backup']['source']['files']['exclude'] ?? [],
-                array_map(fn($dir) => base_path($dir), $settings->exclude_directories)
+                array_map(fn ($dir) => base_path($dir), $settings->exclude_directories)
             );
         }
-        
+
         // Configure databases
-        if (!$settings->include_databases) {
+        if (! $settings->include_databases) {
             $config['backup']['source']['databases'] = [];
-        } elseif (!empty($settings->databases_to_backup)) {
+        } elseif (! empty($settings->databases_to_backup)) {
             $config['backup']['source']['databases'] = $settings->databases_to_backup;
         }
-        
+
         // Configure destination disks
         $disks = ['local'];
         if ($settings->google_drive_enabled && $settings->isGoogleDriveConfigured()) {
             $disks[] = 'google';
         }
         $config['backup']['destination']['disks'] = $disks;
-        
+
         // Configure cleanup/retention settings
         if ($settings->delete_old_backups_enabled) {
             $config['cleanup']['default_strategy'] = [
@@ -81,10 +82,10 @@ class BackupConfigHelper
                 'delete_oldest_backups_when_using_more_megabytes_than' => 5000,
             ];
         }
-        
+
         // Disable built-in Spatie notifications since we handle notifications in BackupService
         $config['notifications']['notifications'] = [];
-        
+
         // Configure monitoring
         $config['monitor_backups'] = [[
             'name' => $settings->backup_name ?? env('APP_NAME', 'laravel-backup'),
@@ -94,7 +95,7 @@ class BackupConfigHelper
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5000,
             ],
         ]];
-        
+
         return $config;
     }
 

@@ -52,7 +52,7 @@ class EmailConfiguration extends Model
                 if ($encryption === 'none') {
                     $encryption = null;
                 }
-                
+
                 // Actualizar configuración en memoria
                 Config::set([
                     'mail.default' => 'smtp',
@@ -83,7 +83,7 @@ class EmailConfiguration extends Model
                     'MAIL_PASSWORD' => $settings['password'] ?? '',
                     'MAIL_ENCRYPTION' => $encryption ?: 'null',
                     'MAIL_FROM_ADDRESS' => $settings['from_address'] ?? '',
-                    'MAIL_FROM_NAME' => '"' . ($settings['from_name'] ?? '') . '"',
+                    'MAIL_FROM_NAME' => '"'.($settings['from_name'] ?? '').'"',
                 ]);
                 break;
 
@@ -179,21 +179,21 @@ class EmailConfiguration extends Model
     protected function updateEnvFile(array $variables): void
     {
         $envPath = base_path('.env');
-        
-        if (!file_exists($envPath)) {
+
+        if (! file_exists($envPath)) {
             return;
         }
 
         $envContent = file_get_contents($envPath);
-        
+
         foreach ($variables as $key => $value) {
             // Escapar caracteres especiales en el valor
             $escapedValue = $this->escapeEnvValue($value);
-            
+
             // Patrón para encontrar la variable existente
             $pattern = "/^{$key}=.*$/m";
             $replacement = "{$key}={$escapedValue}";
-            
+
             if (preg_match($pattern, $envContent)) {
                 // Reemplazar variable existente
                 $envContent = preg_replace($pattern, $replacement, $envContent);
@@ -202,14 +202,14 @@ class EmailConfiguration extends Model
                 $envContent .= "\n{$replacement}";
             }
         }
-        
+
         file_put_contents($envPath, $envContent);
-        
+
         // Limpiar cache de configuración para que Laravel use los nuevos valores
         if (function_exists('opcache_reset')) {
             opcache_reset();
         }
-        
+
         \Artisan::call('config:clear');
     }
 
@@ -222,12 +222,12 @@ class EmailConfiguration extends Model
         if ($value === null || $value === 'null') {
             return 'null';
         }
-        
+
         // Si el valor contiene espacios, comillas o caracteres especiales, envolverlo en comillas
         if (preg_match('/[\s"\'#\\\\]/', $value)) {
-            return '"' . str_replace('"', '\\"', $value) . '"';
+            return '"'.str_replace('"', '\\"', $value).'"';
         }
-        
+
         return $value;
     }
 }

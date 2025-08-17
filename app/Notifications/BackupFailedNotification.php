@@ -2,11 +2,11 @@
 
 namespace App\Notifications;
 
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
-use Carbon\Carbon;
 
 class BackupFailedNotification extends Notification
 {
@@ -22,12 +22,12 @@ class BackupFailedNotification extends Notification
     public function via($notifiable): array
     {
         $channels = ['mail'];
-        
+
         // Add Slack if webhook URL is configured
-        if (!empty($this->errorInfo['slack_webhook_url'])) {
+        if (! empty($this->errorInfo['slack_webhook_url'])) {
             $channels[] = 'slack';
         }
-        
+
         return $channels;
     }
 
@@ -37,7 +37,7 @@ class BackupFailedNotification extends Notification
         $backupName = $this->errorInfo['backup_name'] ?? 'Backup';
         $timestamp = Carbon::now()->format('d/m/Y H:i:s');
         $error = $this->errorInfo['error'] ?? 'Error desconocido';
-        
+
         return (new MailMessage)
             ->subject("❌ Error en Backup - {$appName}")
             ->greeting('Error en Backup')
@@ -68,10 +68,10 @@ class BackupFailedNotification extends Notification
         $backupName = $this->errorInfo['backup_name'] ?? 'Backup';
         $timestamp = Carbon::now()->format('d/m/Y H:i:s');
         $error = $this->errorInfo['error'] ?? 'Error desconocido';
-        
+
         return (new SlackMessage)
             ->error()
-            ->content("❌ Error en backup")
+            ->content('❌ Error en backup')
             ->attachment(function ($attachment) use ($appName, $backupName, $timestamp, $error) {
                 $attachment
                     ->title("Backup Fallido: {$backupName}")
@@ -82,7 +82,7 @@ class BackupFailedNotification extends Notification
                         'Error' => $error,
                     ])
                     ->color('danger');
-                    
+
                 if (isset($this->errorInfo['exit_code'])) {
                     $attachment->field('Código de salida', $this->errorInfo['exit_code']);
                 }

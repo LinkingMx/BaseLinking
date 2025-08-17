@@ -19,11 +19,11 @@ return new class extends Migration
                 ->after('rejected_by')->comment('Fecha y hora del rechazo');
             $table->text('rejection_reason')->nullable()
                 ->after('rejected_at')->comment('Razón del rechazo');
-            
+
             // Campos de nivel de aprobación
             $table->tinyInteger('approval_level')->default(0)
                 ->after('rejection_reason')->comment('Nivel actual de aprobación (0-3)');
-            
+
             // Historial de aprobaciones (JSON)
             $table->json('approval_history')->nullable()
                 ->after('approval_level')->comment('Historial completo de aprobaciones y rechazos');
@@ -39,9 +39,9 @@ return new class extends Migration
             $table->dropConstrainedForeignId('rejected_by');
             $table->dropColumn([
                 'rejected_at',
-                'rejection_reason', 
+                'rejection_reason',
                 'approval_level',
-                'approval_history'
+                'approval_history',
             ]);
         });
     }

@@ -20,7 +20,7 @@ return new class extends Migration
                 } catch (\Exception $e) {
                     // Ignorar si el índice no existe
                 }
-                
+
                 $table->dropColumn('category');
             }
         });

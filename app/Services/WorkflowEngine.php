@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Services\AdvancedWorkflowEngine;
-
 /**
  * Alias para mantener compatibilidad
  * Ahora WorkflowEngine usa directamente el sistema avanzado

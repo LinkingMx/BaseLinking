@@ -211,7 +211,7 @@ class SettingsHelper
      */
     public static function formatDate($date): string
     {
-        if (!$date) {
+        if (! $date) {
             return '';
         }
 
@@ -230,7 +230,7 @@ class SettingsHelper
      */
     public static function formatTime($time): string
     {
-        if (!$time) {
+        if (! $time) {
             return '';
         }
 
@@ -249,7 +249,7 @@ class SettingsHelper
      */
     public static function formatDateTime($datetime): string
     {
-        if (!$datetime) {
+        if (! $datetime) {
             return '';
         }
 
@@ -294,6 +294,7 @@ class SettingsHelper
     public static function now(): \Carbon\Carbon
     {
         $timezone = self::timezone() ?: config('app.timezone', 'UTC');
+
         return \Carbon\Carbon::now($timezone);
     }
 
@@ -303,6 +304,7 @@ class SettingsHelper
     public static function parseDate(string $date): \Carbon\Carbon
     {
         $timezone = self::timezone() ?: config('app.timezone', 'UTC');
+
         return \Carbon\Carbon::parse($date, $timezone);
     }
 
@@ -312,7 +314,7 @@ class SettingsHelper
     public static function formatMoney(float $amount, bool $showSymbol = true): string
     {
         $currency = self::currency() ?: 'USD';
-        
+
         $currencySymbols = [
             'MXN' => '$',
             'USD' => '$',
@@ -332,7 +334,7 @@ class SettingsHelper
         $symbol = $currencySymbols[$currency] ?? $currency;
         $formattedAmount = number_format($amount, 2);
 
-        return $showSymbol ? $symbol . ' ' . $formattedAmount : $formattedAmount;
+        return $showSymbol ? $symbol.' '.$formattedAmount : $formattedAmount;
     }
 
     /**
@@ -341,7 +343,7 @@ class SettingsHelper
     public static function getCurrencySymbol(): string
     {
         $currency = self::currency() ?: 'USD';
-        
+
         $currencySymbols = [
             'MXN' => '$',
             'USD' => '$',
@@ -368,12 +370,12 @@ class SettingsHelper
     {
         // Remove # if present
         $hex = ltrim($hex, '#');
-        
+
         // Convert to RGB
         $r = hexdec(substr($hex, 0, 2));
         $g = hexdec(substr($hex, 2, 2));
         $b = hexdec(substr($hex, 4, 2));
-        
+
         // Generate color shades
         return [
             '50' => self::adjustBrightness($r, $g, $b, 0.95),
@@ -407,8 +409,8 @@ class SettingsHelper
             $g = max(0, $g * (1 - $factor));
             $b = max(0, $b * (1 - $factor));
         }
-        
-        return sprintf('#%02x%02x%02x', (int)$r, (int)$g, (int)$b);
+
+        return sprintf('#%02x%02x%02x', (int) $r, (int) $g, (int) $b);
     }
 
     /**
@@ -417,7 +419,7 @@ class SettingsHelper
     public static function getFilamentColors(): array
     {
         $appearance = self::appearance();
-        
+
         return [
             'primary' => self::hexToFilamentColor($appearance->primary_color ?? '#f59e0b'),
             'danger' => self::hexToFilamentColor($appearance->danger_color ?? '#ef4444'),

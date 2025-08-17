@@ -2,14 +2,14 @@
 
 use App\Helpers\SettingsHelper;
 
-if (!function_exists('settings')) {
+if (! function_exists('settings')) {
     /**
      * Get settings helper instance or specific setting value
      */
     function settings(?string $key = null)
     {
         if ($key === null) {
-            return new SettingsHelper();
+            return new SettingsHelper;
         }
 
         // Handle dot notation like 'general.app_name'
@@ -18,7 +18,7 @@ if (!function_exists('settings')) {
 
         $value = $settings;
         foreach ($keys as $segment) {
-            if (!isset($value[$segment])) {
+            if (! isset($value[$segment])) {
                 return null;
             }
             $value = $value[$segment];
@@ -28,7 +28,7 @@ if (!function_exists('settings')) {
     }
 }
 
-if (!function_exists('app_name')) {
+if (! function_exists('app_name')) {
     /**
      * Get the application name from settings
      */
@@ -38,7 +38,7 @@ if (!function_exists('app_name')) {
     }
 }
 
-if (!function_exists('app_logo')) {
+if (! function_exists('app_logo')) {
     /**
      * Get the application logo URL from settings
      */
@@ -48,7 +48,7 @@ if (!function_exists('app_logo')) {
     }
 }
 
-if (!function_exists('dark_mode_logo')) {
+if (! function_exists('dark_mode_logo')) {
     /**
      * Get the dark mode logo URL from settings
      */
@@ -58,7 +58,7 @@ if (!function_exists('dark_mode_logo')) {
     }
 }
 
-if (!function_exists('contact_email')) {
+if (! function_exists('contact_email')) {
     /**
      * Get the contact email from settings
      */
@@ -68,7 +68,7 @@ if (!function_exists('contact_email')) {
     }
 }
 
-if (!function_exists('format_date')) {
+if (! function_exists('format_date')) {
     /**
      * Format a date using the configured format
      */
@@ -78,7 +78,7 @@ if (!function_exists('format_date')) {
     }
 }
 
-if (!function_exists('format_time')) {
+if (! function_exists('format_time')) {
     /**
      * Format a time using the configured format
      */
@@ -88,7 +88,7 @@ if (!function_exists('format_time')) {
     }
 }
 
-if (!function_exists('format_datetime')) {
+if (! function_exists('format_datetime')) {
     /**
      * Format a datetime using the configured format
      */

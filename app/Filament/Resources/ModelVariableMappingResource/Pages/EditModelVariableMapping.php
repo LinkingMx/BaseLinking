@@ -16,10 +16,11 @@ class EditModelVariableMapping extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
-    
+
     public function getTitle(): string
     {
         $record = $this->getRecord();
-        return 'Editar Variable: ' . $record->variable_name;
+
+        return 'Editar Variable: '.$record->variable_name;
     }
 }

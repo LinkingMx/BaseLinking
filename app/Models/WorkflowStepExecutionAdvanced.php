@@ -11,10 +11,15 @@ class WorkflowStepExecutionAdvanced extends Model
 
     // Estados de ejecución de paso
     const STATUS_PENDING = 'pending';
+
     const STATUS_IN_PROGRESS = 'in_progress';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_FAILED = 'failed';
+
     const STATUS_SKIPPED = 'skipped';
+
     const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
@@ -178,7 +183,7 @@ class WorkflowStepExecutionAdvanced extends Model
     public function addNotificationSent(string $recipient, string $templateKey, array $details = []): void
     {
         $notifications = $this->notifications_sent ?? [];
-        
+
         $notifications[] = [
             'recipient' => $recipient,
             'template_key' => $templateKey,
@@ -242,7 +247,7 @@ class WorkflowStepExecutionAdvanced extends Model
      */
     public function requiresUserAction(): bool
     {
-        return $this->stepDefinition->requiresManualIntervention() && 
+        return $this->stepDefinition->requiresManualIntervention() &&
                $this->isInProgress();
     }
 
@@ -251,9 +256,9 @@ class WorkflowStepExecutionAdvanced extends Model
      */
     public function isOverdue(): bool
     {
-        return $this->due_at && 
-               now()->isAfter($this->due_at) && 
-               !$this->isCompleted();
+        return $this->due_at &&
+               now()->isAfter($this->due_at) &&
+               ! $this->isCompleted();
     }
 
     /**
@@ -261,11 +266,12 @@ class WorkflowStepExecutionAdvanced extends Model
      */
     public function getTimeRemaining(): ?int
     {
-        if (!$this->due_at || $this->isCompleted()) {
+        if (! $this->due_at || $this->isCompleted()) {
             return null;
         }
 
         $remaining = now()->diffInMinutes($this->due_at, false);
+
         return $remaining > 0 ? $remaining : 0;
     }
 
@@ -274,11 +280,12 @@ class WorkflowStepExecutionAdvanced extends Model
      */
     public function getElapsedTime(): ?int
     {
-        if (!$this->started_at) {
+        if (! $this->started_at) {
             return null;
         }
 
         $endTime = $this->completed_at ?? now();
+
         return $this->started_at->diffInMinutes($endTime);
     }
 
@@ -317,7 +324,7 @@ class WorkflowStepExecutionAdvanced extends Model
     /**
      * Obtener datos de entrada específicos
      */
-    public function getInputData(string $key = null, $default = null)
+    public function getInputData(?string $key = null, $default = null)
     {
         if ($key === null) {
             return $this->input_data ?? [];
@@ -333,14 +340,14 @@ class WorkflowStepExecutionAdvanced extends Model
     {
         $inputData = $this->input_data ?? [];
         data_set($inputData, $key, $value);
-        
+
         $this->update(['input_data' => $inputData]);
     }
 
     /**
      * Obtener datos de salida específicos
      */
-    public function getOutputData(string $key = null, $default = null)
+    public function getOutputData(?string $key = null, $default = null)
     {
         if ($key === null) {
             return $this->output_data ?? [];
@@ -356,7 +363,7 @@ class WorkflowStepExecutionAdvanced extends Model
     {
         $outputData = $this->output_data ?? [];
         data_set($outputData, $key, $value);
-        
+
         $this->update(['output_data' => $outputData]);
     }
 
@@ -374,7 +381,7 @@ class WorkflowStepExecutionAdvanced extends Model
     public function wasNotificationSentTo(string $recipient): bool
     {
         $notifications = $this->notifications_sent ?? [];
-        
+
         foreach ($notifications as $notification) {
             if ($notification['recipient'] === $recipient) {
                 return true;
@@ -398,7 +405,7 @@ class WorkflowStepExecutionAdvanced extends Model
     public function scopeOverdue($query)
     {
         return $query->where('due_at', '<', now())
-                    ->whereNotIn('status', [self::STATUS_COMPLETED, self::STATUS_CANCELLED]);
+            ->whereNotIn('status', [self::STATUS_COMPLETED, self::STATUS_CANCELLED]);
     }
 
     /**
@@ -415,8 +422,8 @@ class WorkflowStepExecutionAdvanced extends Model
     public function scopeRequiringAction($query)
     {
         return $query->where('status', self::STATUS_IN_PROGRESS)
-                    ->whereHas('stepDefinition', function ($subQuery) {
-                        $subQuery->where('step_type', WorkflowStepDefinition::TYPE_APPROVAL);
-                    });
+            ->whereHas('stepDefinition', function ($subQuery) {
+                $subQuery->where('step_type', WorkflowStepDefinition::TYPE_APPROVAL);
+            });
     }
 }

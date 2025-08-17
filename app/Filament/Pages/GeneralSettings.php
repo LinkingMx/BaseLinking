@@ -14,9 +14,13 @@ use Filament\Pages\SettingsPage;
 class GeneralSettings extends SettingsPage
 {
     protected static ?string $navigationIcon = 'heroicon-o-building-office';
+
     protected static ?string $navigationGroup = 'Configuración';
+
     protected static ?string $title = 'Configuración General';
+
     protected static ?string $navigationLabel = 'General';
+
     protected static ?int $navigationSort = 1;
 
     protected static string $settings = Settings::class;

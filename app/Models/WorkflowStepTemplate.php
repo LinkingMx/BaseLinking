@@ -9,11 +9,17 @@ class WorkflowStepTemplate extends Model
 {
     // Tipos de destinatarios
     const RECIPIENT_TYPE_CREATOR = 'creator';
+
     const RECIPIENT_TYPE_APPROVER = 'approver';
+
     const RECIPIENT_TYPE_ROLE = 'role';
+
     const RECIPIENT_TYPE_USER = 'user';
+
     const RECIPIENT_TYPE_CONDITIONAL = 'conditional';
+
     const RECIPIENT_TYPE_DYNAMIC = 'dynamic';
+
     const RECIPIENT_TYPE_EMAIL = 'email';
 
     protected $fillable = [
@@ -162,7 +168,7 @@ class WorkflowStepTemplate extends Model
         $config = $this->recipient_config;
         $recipients = [];
 
-        if (!isset($config['condition']) || !isset($config['then_recipients'])) {
+        if (! isset($config['condition']) || ! isset($config['then_recipients'])) {
             return $recipients;
         }
 
@@ -179,14 +185,14 @@ class WorkflowStepTemplate extends Model
             '>' => $modelValue > $value,
             '<' => $modelValue < $value,
             'in' => in_array($modelValue, (array) $value),
-            'not_in' => !in_array($modelValue, (array) $value),
+            'not_in' => ! in_array($modelValue, (array) $value),
             default => false,
         };
 
         if ($conditionMet) {
             // Obtener destinatarios si la condición se cumple
             $thenRecipients = $config['then_recipients'];
-            
+
             if ($thenRecipients['type'] === 'users') {
                 $users = User::whereIn('id', $thenRecipients['user_ids'])->get();
                 foreach ($users as $user) {
@@ -213,7 +219,7 @@ class WorkflowStepTemplate extends Model
         $config = $this->recipient_config;
         $recipients = [];
 
-        if (!isset($config['dynamic_type'])) {
+        if (! isset($config['dynamic_type'])) {
             return $recipients;
         }
 
@@ -281,7 +287,7 @@ class WorkflowStepTemplate extends Model
     protected function getDirectEmailRecipients(): array
     {
         $config = $this->recipient_config;
-        
+
         if (isset($config['emails']) && is_array($config['emails'])) {
             return array_filter($config['emails'], function ($email) {
                 return filter_var($email, FILTER_VALIDATE_EMAIL);
@@ -297,7 +303,7 @@ class WorkflowStepTemplate extends Model
     public function processTemplateVariables(array $baseVariables = []): array
     {
         $templateVars = $this->template_variables ?? [];
-        
+
         // Combinar variables base con variables específicas del template
         return array_merge($baseVariables, $templateVars);
     }
@@ -327,22 +333,22 @@ class WorkflowStepTemplate extends Model
         // Si hay condiciones específicas del template
         if (isset($this->template_variables['send_conditions'])) {
             $sendConditions = $this->template_variables['send_conditions'];
-            
+
             // Verificar eventos de disparo
             if (isset($sendConditions['trigger_events'])) {
                 $currentEvent = $context['trigger_event'] ?? '';
-                if (!in_array($currentEvent, $sendConditions['trigger_events'])) {
+                if (! in_array($currentEvent, $sendConditions['trigger_events'])) {
                     return false;
                 }
             }
-            
+
             // Verificar condiciones de campo si existen
             if (isset($sendConditions['field_conditions'])) {
                 foreach ($sendConditions['field_conditions'] as $condition) {
-                    if (!isset($condition['field']) || !isset($condition['operator'])) {
+                    if (! isset($condition['field']) || ! isset($condition['operator'])) {
                         continue;
                     }
-                    
+
                     $field = $condition['field'];
                     $operator = $condition['operator'];
                     $value = $condition['value'] ?? null;
@@ -354,12 +360,12 @@ class WorkflowStepTemplate extends Model
                         '>' => $modelValue > $value,
                         '<' => $modelValue < $value,
                         'changed' => $model->wasChanged($field),
-                        'exists' => !is_null($modelValue) && $modelValue !== '',
+                        'exists' => ! is_null($modelValue) && $modelValue !== '',
                         'not_exists' => is_null($modelValue) || $modelValue === '',
                         default => false,
                     };
 
-                    if (!$conditionMet) {
+                    if (! $conditionMet) {
                         return false;
                     }
                 }

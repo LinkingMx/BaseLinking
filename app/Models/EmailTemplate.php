@@ -53,13 +53,13 @@ class EmailTemplate extends Model
     public function processContent(array $variables = []): string
     {
         $content = $this->content ?? '';
-        
+
         // Procesar variables con soporte para anidadas y formateo
         $content = $this->processVariables($content, $variables);
-        
+
         return $content;
     }
-    
+
     /**
      * Procesar variables con soporte para anidadas y formateo
      */
@@ -70,7 +70,7 @@ class EmailTemplate extends Model
             $varPath = trim($matches[1]);
             $format = trim($matches[2]);
             $value = $this->getNestedValue($variables, $varPath);
-            
+
             // Si el valor está vacío, usar valor por defecto antes del formateo
             if ($value === null || $value === '') {
                 $defaultValue = $this->getDefaultValueForVariable($varPath);
@@ -78,40 +78,41 @@ class EmailTemplate extends Model
                     $value = $defaultValue;
                 }
             }
-            
+
             // Aplicar formateo
             if ($value !== null && $value !== '') {
                 return $this->formatValue($value, $format);
             }
-            
+
             return $matches[0];
         }, $content);
-        
+
         // Luego procesar variables normales y anidadas {{variable}} o {{variable.nested}}
         $content = preg_replace_callback('/\{\{([^}]+)\}\}/', function ($matches) use ($variables) {
             $varPath = trim($matches[1]);
             $value = $this->getNestedValue($variables, $varPath);
-            
+
             if ($value !== null && $value !== '') {
                 if (is_array($value)) {
                     return json_encode($value);
                 }
+
                 return (string) $value;
             }
-            
+
             // Si la variable está vacía o es nula, usar valores por defecto
             $defaultValue = $this->getDefaultValueForVariable($varPath);
             if ($defaultValue !== null) {
                 return $defaultValue;
             }
-            
+
             // Si no hay valor por defecto, devolver la variable original sin procesar
             return $matches[0];
         }, $content);
-        
+
         return $content;
     }
-    
+
     /**
      * Obtener valor anidado de un array usando notación de puntos
      */
@@ -119,7 +120,7 @@ class EmailTemplate extends Model
     {
         $keys = explode('.', $path);
         $value = $array;
-        
+
         foreach ($keys as $key) {
             if (is_array($value) && array_key_exists($key, $value)) {
                 $value = $value[$key];
@@ -129,10 +130,10 @@ class EmailTemplate extends Model
                 return null;
             }
         }
-        
+
         return $value;
     }
-    
+
     /**
      * Formatear valor según el formato especificado
      */
@@ -150,19 +151,21 @@ class EmailTemplate extends Model
                 return (string) $value;
             }
         }
-        
+
         // Formateo de números
         if (strpos($format, 'number:') === 0) {
             $decimals = (int) substr($format, 7) ?: 0;
+
             return number_format((float) $value, $decimals, '.', ',');
         }
-        
+
         // Formateo de moneda
         if (strpos($format, 'currency:') === 0) {
             $currency = substr($format, 9) ?: 'USD';
-            return $currency . ' ' . number_format((float) $value, 2, '.', ',');
+
+            return $currency.' '.number_format((float) $value, 2, '.', ',');
         }
-        
+
         // Formateo uppercase/lowercase
         if ($format === 'upper') {
             return strtoupper((string) $value);
@@ -173,7 +176,7 @@ class EmailTemplate extends Model
         if ($format === 'capitalize') {
             return ucfirst(strtolower((string) $value));
         }
-        
+
         return (string) $value;
     }
 
@@ -206,15 +209,15 @@ class EmailTemplate extends Model
             'invoice.due_date' => 'Sin fecha límite',
             'invoice.payment_terms' => '30 días',
         ];
-        
+
         // Verificar si hay un valor por defecto específico
         if (isset($defaults[$varPath])) {
             return $defaults[$varPath];
         }
-        
+
         // Valores por defecto basados en el tipo de campo
         $fieldName = substr(strrchr($varPath, '.'), 1) ?: $varPath;
-        
+
         switch ($fieldName) {
             case 'state':
             case 'status':
@@ -257,19 +260,20 @@ class EmailTemplate extends Model
     {
         return $this->processVariables($this->subject, $variables);
     }
-    
+
     /**
      * Obtener variables disponibles del modelo
      */
     public function getModelVariables(): array
     {
-        if (!$this->model_type) {
+        if (! $this->model_type) {
             return [];
         }
-        
+
         try {
             $introspectionService = app(\App\Services\ModelIntrospectionService::class);
             $modelInfo = $introspectionService->getModelInfo($this->model_type);
+
             return $modelInfo['available_variables'] ?? [];
         } catch (\Exception $e) {
             return [];

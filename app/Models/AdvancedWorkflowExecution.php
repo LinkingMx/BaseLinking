@@ -10,9 +10,13 @@ class AdvancedWorkflowExecution extends Model
 {
     // Estados de ejecución
     const STATUS_PENDING = 'pending';
+
     const STATUS_IN_PROGRESS = 'in_progress';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_FAILED = 'failed';
+
     const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
@@ -73,7 +77,7 @@ class AdvancedWorkflowExecution extends Model
      */
     public function getTargetModel(): ?Model
     {
-        if (!class_exists($this->target_model)) {
+        if (! class_exists($this->target_model)) {
             return null;
         }
 
@@ -90,20 +94,20 @@ class AdvancedWorkflowExecution extends Model
     public function getTargetTitle(): string
     {
         $targetModel = $this->getTargetModel();
-        
-        if (!$targetModel) {
+
+        if (! $targetModel) {
             return "Registro #{$this->target_id}";
         }
 
         $titleFields = ['title', 'name', 'subject', 'description'];
-        
+
         foreach ($titleFields as $field) {
             if (isset($targetModel->$field) && $targetModel->$field) {
                 return $targetModel->$field;
             }
         }
 
-        return class_basename($this->target_model) . " #{$this->target_id}";
+        return class_basename($this->target_model)." #{$this->target_id}";
     }
 
     /**
@@ -116,8 +120,9 @@ class AdvancedWorkflowExecution extends Model
             ->ordered()
             ->first();
 
-        if (!$firstStep) {
+        if (! $firstStep) {
             $this->markAsFailed('No se encontraron pasos activos');
+
             return false;
         }
 
@@ -139,26 +144,28 @@ class AdvancedWorkflowExecution extends Model
         $currentStep = $this->currentStep;
         $targetModel = $this->getTargetModel();
         $context = $this->getContext();
-        
+
         // Buscar el siguiente paso que debería ejecutarse
         $nextSteps = $this->workflow->stepDefinitions()
             ->where('step_order', '>', $this->current_step_order)
             ->active()
             ->ordered()
             ->get();
-            
+
         foreach ($nextSteps as $nextStep) {
             if ($nextStep->shouldExecute($targetModel, $context)) {
                 $this->update([
                     'current_step_id' => $nextStep->id,
                     'current_step_order' => $nextStep->step_order,
                 ]);
+
                 return $nextStep;
             }
         }
-        
+
         // No hay más pasos aplicables, completar workflow
         $this->markAsCompleted();
+
         return null;
     }
 
@@ -167,7 +174,7 @@ class AdvancedWorkflowExecution extends Model
      */
     public function getCurrentStepExecution(): ?WorkflowStepExecutionAdvanced
     {
-        if (!$this->current_step_id) {
+        if (! $this->current_step_id) {
             return null;
         }
 
@@ -196,7 +203,7 @@ class AdvancedWorkflowExecution extends Model
     public function markCurrentStepCompleted(?string $comments = null, ?int $completedBy = null): void
     {
         $currentStepExecution = $this->getCurrentStepExecution();
-        
+
         if ($currentStepExecution) {
             $currentStepExecution->markAsCompleted($comments, $completedBy);
         }
@@ -217,7 +224,7 @@ class AdvancedWorkflowExecution extends Model
     {
         $stepResults = $this->step_results ?? [];
         $stepResults[$stepOrder] = $result;
-        
+
         $this->update(['step_results' => $stepResults]);
     }
 
@@ -227,7 +234,7 @@ class AdvancedWorkflowExecution extends Model
     public function getProgress(): int
     {
         $totalSteps = $this->workflow->getTotalSteps();
-        
+
         if ($totalSteps === 0) {
             return 100;
         }
@@ -275,7 +282,7 @@ class AdvancedWorkflowExecution extends Model
         $contextData = $this->context_data ?? [];
         $contextData['failure_reason'] = $reason;
         $contextData['failed_at'] = now()->toISOString();
-        
+
         $this->update(['context_data' => $contextData]);
     }
 
@@ -300,7 +307,7 @@ class AdvancedWorkflowExecution extends Model
         $contextData['cancelled_reason'] = $reason;
         $contextData['cancelled_by'] = $cancelledBy;
         $contextData['cancelled_at'] = now()->toISOString();
-        
+
         $this->update(['context_data' => $contextData]);
     }
 
@@ -354,7 +361,7 @@ class AdvancedWorkflowExecution extends Model
     /**
      * Obtener contexto específico para este workflow
      */
-    public function getContext(string $key = null, $default = null)
+    public function getContext(?string $key = null, $default = null)
     {
         if ($key === null) {
             return $this->context_data ?? [];
@@ -370,7 +377,7 @@ class AdvancedWorkflowExecution extends Model
     {
         $contextData = $this->context_data ?? [];
         data_set($contextData, $key, $value);
-        
+
         $this->update(['context_data' => $contextData]);
     }
 
@@ -412,7 +419,7 @@ class AdvancedWorkflowExecution extends Model
     public function scopeForModel($query, string $modelClass, int $modelId)
     {
         return $query->where('target_model', $modelClass)
-                    ->where('target_id', $modelId);
+            ->where('target_id', $modelId);
     }
 
     /**
@@ -420,11 +427,12 @@ class AdvancedWorkflowExecution extends Model
      */
     public function getElapsedTime(): ?int
     {
-        if (!$this->started_at) {
+        if (! $this->started_at) {
             return null;
         }
 
         $endTime = $this->completed_at ?? now();
+
         return $this->started_at->diffInMinutes($endTime);
     }
 

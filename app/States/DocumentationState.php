@@ -23,13 +23,29 @@ abstract class DocumentationState extends State
     {
         return parent::config()
             ->default(DraftState::class)
-            ->allowTransition(DraftState::class, PendingApprovalState::class)
-            ->allowTransition(PendingApprovalState::class, ApprovedState::class)
-            ->allowTransition(PendingApprovalState::class, RejectedState::class)
-            ->allowTransition(ApprovedState::class, PublishedState::class)
-            ->allowTransition(PublishedState::class, ArchivedState::class)
+            // Flujo principal de aprobación
+            ->allowTransition(DraftState::class, PendingSupervisorState::class)
+            ->allowTransition(PendingSupervisorState::class, ApprovedSupervisorPendingTravelState::class)
+            ->allowTransition(ApprovedSupervisorPendingTravelState::class, ApprovedTravelPendingTreasuryState::class)
+            ->allowTransition(ApprovedTravelPendingTreasuryState::class, FullyApprovedState::class)
+
+            // Transiciones de rechazo desde cualquier estado de aprobación
+            ->allowTransition(PendingSupervisorState::class, RejectedState::class)
+            ->allowTransition(ApprovedSupervisorPendingTravelState::class, RejectedState::class)
+            ->allowTransition(ApprovedTravelPendingTreasuryState::class, RejectedState::class)
+
+            // Regreso a borrador desde rechazo
             ->allowTransition(RejectedState::class, DraftState::class)
-            ->allowTransition([DraftState::class, RejectedState::class], PendingApprovalState::class);
+
+            // Compatibilidad con estados legacy
+            ->allowTransition(DraftState::class, PendingApprovalState::class) // backward compatibility
+            ->allowTransition(PendingApprovalState::class, ApprovedState::class) // backward compatibility
+            ->allowTransition(PendingApprovalState::class, RejectedState::class) // backward compatibility
+            ->allowTransition(PendingApprovalState::class, ApprovedSupervisorPendingTravelState::class) // bridge to new system
+
+            // Estados finales
+            ->allowTransition(FullyApprovedState::class, PublishedState::class)
+            ->allowTransition([FullyApprovedState::class, PublishedState::class], ArchivedState::class);
     }
 
     /**
@@ -38,7 +54,7 @@ abstract class DocumentationState extends State
     public function getApprovalState(): ?ApprovalState
     {
         $stateName = $this->getStateName();
-        
+
         return ApprovalState::where('model_type', 'App\\Models\\Documentation')
             ->where('name', $stateName)
             ->where('is_active', true)

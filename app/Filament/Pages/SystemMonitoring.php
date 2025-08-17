@@ -13,13 +13,13 @@ use Filament\Pages\Page;
 class SystemMonitoring extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-cpu-chip';
-    
+
     protected static string $view = 'filament.pages.system-monitoring';
-    
+
     protected static ?string $navigationGroup = 'Monitoreo y Logs';
-    
+
     protected static ?string $title = 'Monitoreo del Sistema';
-    
+
     protected static ?int $navigationSort = 1;
 
     public function getWidgets(): array

@@ -9,7 +9,7 @@ class AdvancedWorkflow extends Model
 {
     protected $fillable = [
         'name',
-        'description', 
+        'description',
         'target_model',
         'trigger_conditions',
         'is_active',
@@ -49,7 +49,7 @@ class AdvancedWorkflow extends Model
     public function stepDefinitions(): HasMany
     {
         return $this->hasMany(WorkflowStepDefinition::class)
-                    ->orderBy('step_order');
+            ->orderBy('step_order');
     }
 
     /**
@@ -66,9 +66,9 @@ class AdvancedWorkflow extends Model
     public function getActiveSteps()
     {
         return $this->stepDefinitions()
-                    ->where('is_active', true)
-                    ->orderBy('step_order')
-                    ->get();
+            ->where('is_active', true)
+            ->orderBy('step_order')
+            ->get();
     }
 
     /**
@@ -76,7 +76,7 @@ class AdvancedWorkflow extends Model
      */
     public function shouldTrigger(Model $model, string $event, array $context = []): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -100,14 +100,14 @@ class AdvancedWorkflow extends Model
         }
 
         // Verificar evento
-        if (isset($conditions['events']) && !in_array($event, $conditions['events'])) {
+        if (isset($conditions['events']) && ! in_array($event, $conditions['events'])) {
             return false;
         }
 
         // Verificar condiciones de campo
         if (isset($conditions['field_conditions'])) {
             foreach ($conditions['field_conditions'] as $condition) {
-                if (!$this->evaluateFieldCondition($model, $condition)) {
+                if (! $this->evaluateFieldCondition($model, $condition)) {
                     return false;
                 }
             }
@@ -132,7 +132,7 @@ class AdvancedWorkflow extends Model
             '>' => $modelValue > $value,
             '<' => $modelValue < $value,
             'in' => in_array($modelValue, (array) $value),
-            'not_in' => !in_array($modelValue, (array) $value),
+            'not_in' => ! in_array($modelValue, (array) $value),
             'changed' => $model->wasChanged($field),
             'changed_to' => $model->wasChanged($field) && $modelValue == $value,
             'changed_from' => $model->wasChanged($field) && $model->getOriginal($field) == $value,
@@ -162,26 +162,26 @@ class AdvancedWorkflow extends Model
     public static function getTriggeredWorkflows(Model $model, string $event, array $context = []): array
     {
         return static::active()
-                    ->forModel(get_class($model))
-                    ->get()
-                    ->filter(function ($workflow) use ($model, $event, $context) {
-                        return $workflow->shouldTrigger($model, $event, $context);
-                    })
-                    ->values()
-                    ->all();
+            ->forModel(get_class($model))
+            ->get()
+            ->filter(function ($workflow) use ($model, $event, $context) {
+                return $workflow->shouldTrigger($model, $event, $context);
+            })
+            ->values()
+            ->all();
     }
-    
+
     /**
      * Obtener el Master Workflow para un modelo específico
      */
     public static function getMasterWorkflowForModel(string $modelClass): ?AdvancedWorkflow
     {
         return static::active()
-                    ->forModel($modelClass)
-                    ->where('is_master_workflow', true)
-                    ->first();
+            ->forModel($modelClass)
+            ->where('is_master_workflow', true)
+            ->first();
     }
-    
+
     /**
      * Verificar si este es un Master Workflow
      */
@@ -197,7 +197,7 @@ class AdvancedWorkflow extends Model
     {
         return $this->stepDefinitions()->active()->count();
     }
-    
+
     /**
      * Scope para workflows maestros
      */
@@ -205,7 +205,7 @@ class AdvancedWorkflow extends Model
     {
         return $query->where('is_master_workflow', true);
     }
-    
+
     /**
      * Scope para workflows no maestros (legacy)
      */

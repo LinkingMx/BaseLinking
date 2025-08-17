@@ -3,14 +3,13 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ApprovalStateResource\Pages;
-use App\Filament\Resources\ApprovalStateResource\RelationManagers;
 use App\Models\ApprovalState;
+use App\Services\StateClassRegistry;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class ApprovalStateResource extends Resource
 {
@@ -24,7 +23,7 @@ class ApprovalStateResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Estados de Aprobación';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Automatización';
 
     protected static ?int $navigationSort = 4;
 
@@ -101,6 +100,24 @@ class ApprovalStateResource extends Resource
 
                 Forms\Components\Section::make('Configuración de Comportamiento')
                     ->schema([
+                        Forms\Components\Select::make('state_class')
+                            ->label('Clase de Estado')
+                            ->options(function () {
+                                return app(StateClassRegistry::class)->getAvailableStateClasses();
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->helperText('Clase PHP que implementa la lógica específica de este estado. Si no se especifica, se intentará resolver automáticamente.')
+                            ->rules([
+                                fn () => function (string $attribute, $value, \Closure $fail) {
+                                    if ($value && ! app(StateClassRegistry::class)->isValidStateClass($value)) {
+                                        $fail('La clase de estado seleccionada no es válida.');
+                                    }
+                                },
+                            ])
+                            ->columnSpanFull(),
+
                         Forms\Components\Toggle::make('is_initial')
                             ->label('Estado Inicial')
                             ->helperText('Este es el estado por defecto para nuevos registros'),
@@ -142,6 +159,20 @@ class ApprovalStateResource extends Resource
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('state_class')
+                    ->label('Clase de Estado')
+                    ->formatStateUsing(function (?string $state): string {
+                        if (! $state) {
+                            return 'Auto-resolver';
+                        }
+
+                        return class_basename($state);
+                    })
+                    ->tooltip(fn (?string $state): string => $state ?? 'Se resolverá automáticamente basado en convenciones')
+                    ->color(fn (?string $state): string => $state ? 'success' : 'gray')
+                    ->icon(fn (?string $state): string => $state ? 'heroicon-o-check-circle' : 'heroicon-o-cog-6-tooth')
+                    ->toggleable(),
+
                 Tables\Columns\IconColumn::make('is_initial')
                     ->label('Inicial')
                     ->boolean()
@@ -179,6 +210,25 @@ class ApprovalStateResource extends Resource
                         'App\\Models\\Documentation' => 'Documentation',
                         'App\\Models\\User' => 'User',
                     ]),
+
+                Tables\Filters\SelectFilter::make('state_class')
+                    ->label('Clase de Estado')
+                    ->options(function () {
+                        $options = app(StateClassRegistry::class)->getAvailableStateClasses();
+
+                        return array_merge(['__auto__' => 'Auto-resolver'], $options);
+                    })
+                    ->query(function ($query, array $data) {
+                        if (isset($data['value'])) {
+                            if ($data['value'] === '__auto__') {
+                                return $query->whereNull('state_class');
+                            }
+
+                            return $query->where('state_class', $data['value']);
+                        }
+
+                        return $query;
+                    }),
 
                 Tables\Filters\TernaryFilter::make('is_initial')
                     ->label('Estado Inicial'),
