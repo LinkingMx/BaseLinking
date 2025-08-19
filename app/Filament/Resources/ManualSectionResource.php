@@ -3,6 +3,8 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ManualSectionResource\Pages;
+use App\Models\ManualCategory;
+use App\Models\ManualResource;
 use App\Models\ManualSection;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -24,9 +26,9 @@ class ManualSectionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Manual de Usuario';
 
-    protected static ?string $navigationGroup = 'Documentación';
+    protected static ?string $navigationGroup = 'Ayuda';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {
@@ -51,14 +53,66 @@ class ManualSectionResource extends Resource
                             ->options(ManualSection::getCategories())
                             ->required()
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('key')
+                                    ->label('Clave')
+                                    ->required()
+                                    ->unique('manual_categories', 'key')
+                                    ->placeholder('usuarios, workflows, etc.'),
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Nombre')
+                                    ->required()
+                                    ->placeholder('Gestión de Usuarios'),
+                                Forms\Components\Textarea::make('description')
+                                    ->label('Descripción'),
+                                Forms\Components\TextInput::make('icon')
+                                    ->label('Icono')
+                                    ->placeholder('heroicon-o-users'),
+                                Forms\Components\Select::make('color')
+                                    ->label('Color')
+                                    ->options(ManualCategory::getColorOptions())
+                                    ->default('primary'),
+                            ])
+                            ->createOptionUsing(function (array $data): string {
+                                return ManualCategory::create($data)->key;
+                            }),
 
                         Forms\Components\Select::make('resource_related')
                             ->label('Recurso Relacionado')
                             ->options(ManualSection::getResourceOptions())
                             ->searchable()
                             ->preload()
-                            ->helperText('Recurso de Filament al que se refiere esta sección'),
+                            ->helperText('Recurso de Filament al que se refiere esta sección')
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('key')
+                                    ->label('Clave')
+                                    ->required()
+                                    ->unique('manual_resources', 'key')
+                                    ->placeholder('UserResource, WorkflowWizardResource, etc.'),
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Nombre')
+                                    ->required()
+                                    ->placeholder('Gestión de Usuarios'),
+                                Forms\Components\Textarea::make('description')
+                                    ->label('Descripción'),
+                                Forms\Components\TextInput::make('class_name')
+                                    ->label('Nombre de Clase')
+                                    ->placeholder('App\Filament\Resources\UserResource'),
+                                Forms\Components\TextInput::make('url')
+                                    ->label('URL')
+                                    ->url(),
+                                Forms\Components\TextInput::make('icon')
+                                    ->label('Icono')
+                                    ->placeholder('heroicon-o-users'),
+                                Forms\Components\Select::make('color')
+                                    ->label('Color')
+                                    ->options(ManualResource::getColorOptions())
+                                    ->default('primary'),
+                            ])
+                            ->createOptionUsing(function (array $data): string {
+                                return ManualResource::create($data)->key;
+                            }),
                     ])
                     ->columns(2),
 

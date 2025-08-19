@@ -48,6 +48,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan test --filter=TestName` - Run specific test class
 - `vendor/bin/pest tests/Feature/ExampleTest.php` - Run specific test file
 
+### E2E Testing (Playwright)
+
+- `npm run test:ui` - Run Playwright tests with UI mode
+- `npm run test:backup-history` - Run specific backup history tests
+- `npm run test:backup-history:headed` - Run backup history tests in headed mode
+- `npm run test:report` - Show Playwright test reports
+- `npx playwright test` - Run all Playwright tests
+
 ## Architecture Overview
 
 This is a Laravel + React SPA using Inertia.js with the following key architectural patterns:
@@ -149,6 +157,25 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **Activity Logging**: Comprehensive audit trails via Filament Logger with Spatie Activity Log
 - **Log Types**: Resource operations, user access, notifications, model changes with color-coded categorization
 
+### State Management & Workflow Architecture
+
+- **Spatie Laravel Model States** for type-safe state management
+- **Custom State Classes** in `app/States/` with defined transitions
+- **Dynamic State Transitions** via database configuration in `approval-states` and `state-transitions` resources
+- **HasStateTransitions Trait** for automatic Filament resource state actions
+- **State Transition Logging** with comprehensive audit trail
+- **Unified Workflow Events** system for state changes and model operations
+- **Advanced Workflow Engine** for complex business logic automation
+- **Model Variable Mapping** for dynamic template and notification systems
+
+### Documentation & Manual System Architecture
+
+- **Manual Categories** - Hierarchical organization of documentation sections
+- **Manual Resources** - File and resource management with categorization
+- **Manual Sections** - Content sections with rich text editing via TinyEditor
+- **Documentation Page** - Unified documentation interface within Filament admin
+- **Content Management** - Full CRUD operations with state management integration
+
 ### Filament Admin Panel Navigation Structure
 
 - **"Gestión de Usuarios"**:
@@ -156,6 +183,11 @@ This is a Laravel + React SPA using Inertia.js with the following key architectu
 - **"Comunicaciones"**:
     - Email configurations (`/admin/email-configurations`)
     - Email templates (`/admin/email-templates`)
+- **"Documentación"**:
+    - Manual categories (`/admin/manual-categories`)
+    - Manual resources (`/admin/manual-resources`)
+    - Manual sections (`/admin/manual-sections`)
+    - Documentation page (`/admin/documentation-page`)
 - **"Configuración"**:
     - General settings (`/admin/general-settings`)
     - Appearance settings (`/admin/appearance-settings`)
@@ -221,7 +253,8 @@ When encountering issues:
 - **Route Verification**: Always verify route names exist before using them
 - **Icon Validation**: Ensure all heroicons used are valid in the current heroicons set
 - **Line Icons Only**: NEVER use emojis anywhere in code, UI, or documentation - ALWAYS use line icons (heroicons-o-\*)
-- **Icon Validation**: Ensure all heroicons used are valid in the current heroicons set
+- **HasStateTransitions Trait**: Use the reusable trait for automatic state management in Filament resources
+- **Dynamic Configuration**: Always read from database resources rather than hardcoding business logic
 
 ### 🎨 **UI/UX Consistency**
 

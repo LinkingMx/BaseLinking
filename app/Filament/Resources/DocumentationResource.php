@@ -32,7 +32,7 @@ class DocumentationResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Documentación';
 
-    protected static ?string $navigationLabel = 'Documentación';
+    protected static ?string $navigationLabel = 'Recurso de Prueba';
 
     public static function form(Form $form): Form
     {

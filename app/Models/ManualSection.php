@@ -44,6 +44,16 @@ class ManualSection extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function categoryModel(): BelongsTo
+    {
+        return $this->belongsTo(ManualCategory::class, 'category', 'key');
+    }
+
+    public function resourceModel(): BelongsTo
+    {
+        return $this->belongsTo(ManualResource::class, 'resource_related', 'key');
+    }
+
     // Scopes
     public function scopeActive($query)
     {
@@ -68,18 +78,12 @@ class ManualSection extends Model
     // Métodos utilitarios
     public static function getCategories(): array
     {
-        return [
-            'introduccion' => 'Introducción',
-            'usuarios' => 'Gestión de Usuarios',
-            'workflows' => 'Workflows y Automatización',
-            'estados' => 'Estados y Transiciones',
-            'documentacion' => 'Gestión de Documentos',
-            'configuracion' => 'Configuración del Sistema',
-            'backup' => 'Respaldos y Mantenimiento',
-            'monitoreo' => 'Monitoreo del Sistema',
-            'comunicaciones' => 'Email y Comunicaciones',
-            'faq' => 'Preguntas Frecuentes',
-        ];
+        return ManualCategory::getOptions();
+    }
+
+    public static function getCategoryOptions(): array
+    {
+        return self::getCategories();
     }
 
     public static function getDifficultyLevels(): array
@@ -93,18 +97,7 @@ class ManualSection extends Model
 
     public static function getResourceOptions(): array
     {
-        return [
-            'UserResource' => 'Gestión de Usuarios',
-            'WorkflowWizardResource' => 'Asistente de Workflows',
-            'AdvancedWorkflowResource' => 'Workflows Avanzados',
-            'ApprovalStateResource' => 'Estados de Aprobación',
-            'StateTransitionResource' => 'Transiciones de Estado',
-            'DocumentationResource' => 'Documentación',
-            'EmailConfigurationResource' => 'Configuración de Email',
-            'EmailTemplateResource' => 'Plantillas de Email',
-            'BackupManager' => 'Gestión de Respaldos',
-            'SystemMonitoring' => 'Monitoreo del Sistema',
-        ];
+        return \App\Models\ManualResource::getOptions();
     }
 
     // Activity Log

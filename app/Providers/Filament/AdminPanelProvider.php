@@ -76,6 +76,7 @@ class AdminPanelProvider extends PanelProvider
                     ->enableSanctumTokens(),
                 FilamentExceptionsPlugin::make()
                     ->navigationGroup('Monitoreo y Logs')
+                    ->navigationLabel('Visor de Excepciones')
                     ->navigationSort(3),
             ])
             ->middleware([
