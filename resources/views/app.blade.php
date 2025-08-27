@@ -43,6 +43,9 @@
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
+
+        {{-- Custom Styles for Frontend --}}
+        <x-custom-styles target="frontend" />
     </head>
     <body class="font-sans antialiased">
         @inertia
