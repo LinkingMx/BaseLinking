@@ -19,7 +19,7 @@ class SettingsHelper
             // Don't try to access settings during migrations or console commands that might not need them
             if (app()->runningInConsole()) {
                 $command = $_SERVER['argv'][1] ?? '';
-                if (in_array($command, ['migrate', 'migrate:fresh', 'migrate:refresh', 'migrate:reset', 'migrate:rollback'])) {
+                if (in_array($command, ['migrate', 'migrate:fresh', 'migrate:refresh', 'migrate:reset', 'migrate:rollback', 'config:cache', 'route:cache'])) {
                     return false;
                 }
             }
@@ -31,7 +31,17 @@ class SettingsHelper
             
             // Check if settings have been initialized by looking for any general settings
             $count = \DB::table('settings')->where('group', 'general')->count();
-            return $count > 0;
+            if ($count === 0) {
+                return false;
+            }
+
+            // Additional check: verify repository configuration
+            $repository = config('settings.repositories.database');
+            if (empty($repository) || !is_array($repository)) {
+                return false;
+            }
+
+            return true;
             
         } catch (\Exception $e) {
             return false;

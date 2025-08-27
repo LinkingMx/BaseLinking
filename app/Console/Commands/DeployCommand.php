@@ -59,6 +59,10 @@ class DeployCommand extends Command
                 '--path' => 'database/settings',
                 ...$isProduction ? ['--force' => true] : []
             ]);
+
+            // Fix settings configuration issues
+            $this->info('🔧 Fixing settings configuration...');
+            $this->call('settings:fix', ['--clear-cache' => true]);
             
             // Verify settings are working
             $this->info('✅ Verifying settings functionality...');

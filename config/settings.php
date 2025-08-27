@@ -7,7 +7,11 @@ return [
      * put them (manually) here.
      */
     'settings' => [
-
+        App\Settings\GeneralSettings::class,
+        App\Settings\AppearanceSettings::class,
+        App\Settings\LocalizationSettings::class,
+        App\Settings\BackupSettings::class,
+        App\Settings\EmailTemplateSettings::class,
     ],
 
     /*
@@ -37,13 +41,13 @@ return [
         'database' => [
             'type' => Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository::class,
             'model' => null,
-            'table' => null,
-            'connection' => null,
+            'table' => 'settings',
+            'connection' => env('DB_CONNECTION', 'sqlite'),
         ],
         'redis' => [
             'type' => Spatie\LaravelSettings\SettingsRepositories\RedisSettingsRepository::class,
-            'connection' => null,
-            'prefix' => null,
+            'connection' => env('REDIS_CONNECTION', 'default'),
+            'prefix' => env('SETTINGS_REDIS_PREFIX', 'laravel_settings'),
         ],
     ],
 
@@ -61,10 +65,10 @@ return [
      * additional prefix.
      */
     'cache' => [
-        'enabled' => env('SETTINGS_CACHE_ENABLED', false),
-        'store' => null,
-        'prefix' => null,
-        'ttl' => null,
+        'enabled' => env('SETTINGS_CACHE_ENABLED', true),
+        'store' => env('SETTINGS_CACHE_STORE', 'file'),
+        'prefix' => env('SETTINGS_CACHE_PREFIX', 'laravel_settings'),
+        'ttl' => env('SETTINGS_CACHE_TTL', 3600),
     ],
 
     /*
@@ -80,10 +84,11 @@ return [
 
     /*
      * The package will look for settings in these paths and automatically
-     * register them.
+     * register them. Disabled for production stability.
      */
     'auto_discover_settings' => [
-        app_path('Settings'),
+        // Temporarily disabled to avoid conflicts with manual registration
+        // app_path('Settings'),
     ],
 
     /*
