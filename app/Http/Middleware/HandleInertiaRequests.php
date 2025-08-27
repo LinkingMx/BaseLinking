@@ -54,11 +54,22 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'settings' => [
-                'general' => app(GeneralSettings::class)->toArray(),
-                'appearance' => app(AppearanceSettings::class)->toArray(),
-                'localization' => app(LocalizationSettings::class)->toArray(),
-            ],
+            'settings' => function() {
+                try {
+                    return [
+                        'general' => \App\Helpers\SettingsHelper::general()->toArray(),
+                        'appearance' => \App\Helpers\SettingsHelper::appearance()->toArray(),
+                        'localization' => \App\Helpers\SettingsHelper::localization()->toArray(),
+                    ];
+                } catch (\Exception $e) {
+                    // Return empty settings if not available
+                    return [
+                        'general' => [],
+                        'appearance' => [],
+                        'localization' => [],
+                    ];
+                }
+            },
         ];
     }
 }

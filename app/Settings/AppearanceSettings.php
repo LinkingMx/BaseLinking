@@ -51,9 +51,12 @@ class AppearanceSettings extends Settings
     {
         if (! $this->dark_mode_logo) {
             // Fallback to general app logo
-            $generalSettings = app(\App\Settings\GeneralSettings::class);
-
-            return $generalSettings->getAppLogoUrlAttribute();
+            try {
+                $generalSettings = \App\Helpers\SettingsHelper::general();
+                return $generalSettings->getAppLogoUrlAttribute();
+            } catch (\Exception $e) {
+                return asset('logo.svg'); // Fallback to default logo
+            }
         }
 
         return asset('storage/'.$this->dark_mode_logo);

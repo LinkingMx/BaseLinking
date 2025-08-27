@@ -29,6 +29,12 @@ class FixBackupSettingsCommand extends Command
         $this->info('Fixing BackupSettings nullable fields...');
 
         try {
+            // Check if settings are available first
+            if (!\App\Helpers\SettingsHelper::isAvailable()) {
+                $this->error('Settings table not available. Run migrations first.');
+                return Command::FAILURE;
+            }
+
             $settings = app(BackupSettings::class);
 
             $changed = false;

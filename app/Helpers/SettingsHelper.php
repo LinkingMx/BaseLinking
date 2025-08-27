@@ -16,7 +16,23 @@ class SettingsHelper
     public static function isAvailable(): bool
     {
         try {
-            return Schema::hasTable('settings');
+            // Don't try to access settings during migrations or console commands that might not need them
+            if (app()->runningInConsole()) {
+                $command = $_SERVER['argv'][1] ?? '';
+                if (in_array($command, ['migrate', 'migrate:fresh', 'migrate:refresh', 'migrate:reset', 'migrate:rollback'])) {
+                    return false;
+                }
+            }
+            
+            // Check if table exists and has data
+            if (!Schema::hasTable('settings')) {
+                return false;
+            }
+            
+            // Check if settings have been initialized by looking for any general settings
+            $count = \DB::table('settings')->where('group', 'general')->count();
+            return $count > 0;
+            
         } catch (\Exception $e) {
             return false;
         }
@@ -25,108 +41,64 @@ class SettingsHelper
     /**
      * Get general settings instance
      */
-    public static function general(): GeneralSettings
+    public static function general(): GeneralSettings|MockGeneralSettings
     {
         if (!self::isAvailable()) {
-            // Create instance with defaults when table doesn't exist
-            $settings = new GeneralSettings();
-            foreach (GeneralSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockGeneralSettings();
         }
 
         try {
             return app(GeneralSettings::class);
         } catch (\Exception $e) {
-            // During migrations or when settings table doesn't exist yet
-            // Return a default instance
-            $settings = new GeneralSettings();
-            foreach (GeneralSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockGeneralSettings();
         }
     }
 
     /**
      * Get appearance settings instance
      */
-    public static function appearance(): AppearanceSettings
+    public static function appearance(): AppearanceSettings|MockAppearanceSettings
     {
         if (!self::isAvailable()) {
-            // Create instance with defaults when table doesn't exist
-            $settings = new AppearanceSettings();
-            foreach (AppearanceSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockAppearanceSettings();
         }
 
         try {
             return app(AppearanceSettings::class);
         } catch (\Exception $e) {
-            // During migrations or when settings table doesn't exist yet
-            // Return a default instance
-            $settings = new AppearanceSettings();
-            foreach (AppearanceSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockAppearanceSettings();
         }
     }
 
     /**
      * Get localization settings instance
      */
-    public static function localization(): LocalizationSettings
+    public static function localization(): LocalizationSettings|MockLocalizationSettings
     {
         if (!self::isAvailable()) {
-            // Create instance with defaults when table doesn't exist
-            $settings = new LocalizationSettings();
-            foreach (LocalizationSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockLocalizationSettings();
         }
 
         try {
             return app(LocalizationSettings::class);
         } catch (\Exception $e) {
-            // During migrations or when settings table doesn't exist yet
-            // Return a default instance
-            $settings = new LocalizationSettings();
-            foreach (LocalizationSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockLocalizationSettings();
         }
     }
 
     /**
      * Get backup settings instance
      */
-    public static function backup(): BackupSettings
+    public static function backup(): BackupSettings|MockBackupSettings
     {
         if (!self::isAvailable()) {
-            // Create instance with defaults when table doesn't exist
-            $settings = new BackupSettings();
-            foreach (BackupSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockBackupSettings();
         }
 
         try {
             return app(BackupSettings::class);
         } catch (\Exception $e) {
-            // During migrations or when settings table doesn't exist yet
-            // Return a default instance
-            $settings = new BackupSettings();
-            foreach (BackupSettings::defaults() as $key => $value) {
-                $settings->$key = $value;
-            }
-            return $settings;
+            return new MockBackupSettings();
         }
     }
 
@@ -517,5 +489,114 @@ class SettingsHelper
             'success' => self::hexToFilamentColor($appearance->success_color ?? '#10b981'),
             'warning' => self::hexToFilamentColor($appearance->warning_color ?? '#f59e0b'),
         ];
+    }
+}
+
+/**
+ * Mock classes for when settings are not available
+ */
+
+class MockGeneralSettings
+{
+    public $app_name = 'SaaS Helpdesk';
+    public $app_description = 'Sistema de gestión de helpdesk y soporte técnico';
+    public $app_logo = null;
+    public $contact_email = 'support@example.com';
+    public $site_url;
+
+    public function __construct()
+    {
+        $this->site_url = config('app.url');
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'app_name' => $this->app_name,
+            'app_description' => $this->app_description,
+            'app_logo' => $this->app_logo,
+            'contact_email' => $this->contact_email,
+            'site_url' => $this->site_url,
+        ];
+    }
+
+    public function getAppLogoUrlAttribute(): ?string
+    {
+        return asset('logo.svg');
+    }
+}
+
+class MockAppearanceSettings
+{
+    public $theme = 'light';
+    public $primary_color = '#3b82f6';
+    public $danger_color = '#ef4444';
+    public $gray_color = '#6b7280';
+    public $info_color = '#3b82f6';
+    public $success_color = '#10b981';
+    public $warning_color = '#f59e0b';
+    public $font_family = 'Inter';
+    public $dark_mode_logo = null;
+
+    public function toArray(): array
+    {
+        return [
+            'theme' => $this->theme,
+            'primary_color' => $this->primary_color,
+            'danger_color' => $this->danger_color,
+            'gray_color' => $this->gray_color,
+            'info_color' => $this->info_color,
+            'success_color' => $this->success_color,
+            'warning_color' => $this->warning_color,
+            'font_family' => $this->font_family,
+            'dark_mode_logo' => $this->dark_mode_logo,
+        ];
+    }
+
+    public function getDarkModeLogoUrlAttribute(): ?string
+    {
+        return asset('logo.svg');
+    }
+}
+
+class MockLocalizationSettings
+{
+    public $default_language = 'en';
+    public $timezone = 'UTC';
+
+    public function toArray(): array
+    {
+        return [
+            'default_language' => $this->default_language,
+            'timezone' => $this->timezone,
+        ];
+    }
+}
+
+class MockBackupSettings
+{
+    public $google_drive_enabled = false;
+    public $google_drive_service_account_path = null;
+    public $google_drive_service_account_original_name = null;
+    public $google_drive_folder_id = null;
+
+    public function toArray(): array
+    {
+        return [
+            'google_drive_enabled' => $this->google_drive_enabled,
+            'google_drive_service_account_path' => $this->google_drive_service_account_path,
+            'google_drive_service_account_original_name' => $this->google_drive_service_account_original_name,
+            'google_drive_folder_id' => $this->google_drive_folder_id,
+        ];
+    }
+
+    public function isGoogleDriveConfigured(): bool
+    {
+        return false;
+    }
+
+    public function getGoogleDriveCredentials(): ?array
+    {
+        return null;
     }
 }

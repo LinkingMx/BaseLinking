@@ -4,15 +4,13 @@ namespace App\Services;
 
 use App\Models\EmailTemplate;
 use App\Settings\EmailTemplateSettings;
-use App\Settings\GeneralSettings;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class EmailTemplateService
 {
     public function __construct(
-        private EmailTemplateSettings $settings,
-        private GeneralSettings $generalSettings
+        private EmailTemplateSettings $settings
     ) {}
 
     /**
@@ -55,10 +53,12 @@ class EmailTemplateService
      */
     public function getGlobalVariables(): array
     {
+        $generalSettings = \App\Helpers\SettingsHelper::general();
+        
         return [
-            'app_name' => $this->generalSettings->app_name ?? config('app.name'),
+            'app_name' => $generalSettings->app_name ?? config('app.name'),
             'app_url' => config('app.url'),
-            'contact_email' => $this->generalSettings->contact_email ?? 'contact@example.com',
+            'contact_email' => $generalSettings->contact_email ?? 'contact@example.com',
             'support_url' => config('app.url').'/support',
         ];
     }

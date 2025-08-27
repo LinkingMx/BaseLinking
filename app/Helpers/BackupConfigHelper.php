@@ -13,10 +13,9 @@ class BackupConfigHelper
     public static function getConfig(): array
     {
         try {
-            // Check if we're in config loading phase or if settings are available
-            if (app()->bound(BackupSettings::class)) {
-                $settings = app(BackupSettings::class);
-
+            // Check if settings are available before trying to load them
+            if (\App\Helpers\SettingsHelper::isAvailable()) {
+                $settings = \App\Helpers\SettingsHelper::backup();
                 return self::getDynamicConfig($settings);
             }
         } catch (\Exception $e) {

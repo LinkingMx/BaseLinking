@@ -6,6 +6,9 @@ return new class extends SettingsMigration
 {
     public function up(): void
     {
-        $this->migrator->add('backup.google_drive_service_account_original_name', '');
+        // Check if setting already exists before adding
+        if (!$this->migrator->exists('backup.google_drive_service_account_original_name')) {
+            $this->migrator->add('backup.google_drive_service_account_original_name', '');
+        }
     }
 };
