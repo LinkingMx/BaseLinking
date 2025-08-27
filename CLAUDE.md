@@ -16,8 +16,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Settings & Configuration Management
 
-- `php artisan settings:publish` - Publish settings migrations
 - `php artisan migrate --path=database/settings` - Run settings migrations
+
+#### 🚨 IMPORTANTE para Deployments:
+
+Las Settings de Spatie requieren migraciones especiales. En producción ejecutar:
+
+```bash
+# Primero migraciones normales
+php artisan migrate --force
+
+# Luego migraciones de settings (OBLIGATORIO)
+php artisan migrate --path=database/settings --force
+```
 
 ### Backup System Commands
 

@@ -30,23 +30,29 @@ class GoogleDriveServiceProvider extends ServiceProvider
             // Set up the client with service account credentials
             try {
                 // Try to get credentials from backup settings
-                if ($app->bound(\App\Settings\BackupSettings::class)) {
-                    $backupSettings = $app->make(\App\Settings\BackupSettings::class);
+                if (\App\Helpers\SettingsHelper::isAvailable() && $app->bound(\App\Settings\BackupSettings::class)) {
+                    try {
+                        $backupSettings = $app->make(\App\Settings\BackupSettings::class);
 
-                    if ($backupSettings->google_drive_enabled && $backupSettings->isGoogleDriveConfigured()) {
-                        $credentials = $backupSettings->getGoogleDriveCredentials();
-                        if ($credentials) {
-                            $client->setAuthConfig($credentials);
-                            $client->addScope(Drive::DRIVE);
+                        if ($backupSettings->google_drive_enabled && $backupSettings->isGoogleDriveConfigured()) {
+                            $credentials = $backupSettings->getGoogleDriveCredentials();
+                            if ($credentials) {
+                                $client->setAuthConfig($credentials);
+                                $client->addScope(Drive::DRIVE);
 
-                            $service = new Drive($client);
+                                $service = new Drive($client);
 
-                            // Use folder ID from settings if available
-                            $folderId = $backupSettings->google_drive_folder_id ?: ($config['folderId'] ?? null);
-                            $adapter = new GoogleDriveAdapter($service, $folderId);
+                                // Use folder ID from settings if available
+                                $folderId = $backupSettings->google_drive_folder_id ?: ($config['folderId'] ?? null);
+                                $adapter = new GoogleDriveAdapter($service, $folderId);
 
-                            return new Filesystem($adapter);
+                                return new Filesystem($adapter);
+                            }
                         }
+                    } catch (\Exception $settingsException) {
+                        // Settings table might not exist during migrations
+                        // Log and continue to fallback configuration
+                        \Log::info('Settings not available during Google Drive configuration (probably during migration): ' . $settingsException->getMessage());
                     }
                 }
 

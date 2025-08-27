@@ -6,15 +6,47 @@ use App\Settings\AppearanceSettings;
 use App\Settings\BackupSettings;
 use App\Settings\GeneralSettings;
 use App\Settings\LocalizationSettings;
+use Illuminate\Support\Facades\Schema;
 
 class SettingsHelper
 {
+    /**
+     * Check if settings table exists and is ready to use
+     */
+    public static function isAvailable(): bool
+    {
+        try {
+            return Schema::hasTable('settings');
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
     /**
      * Get general settings instance
      */
     public static function general(): GeneralSettings
     {
-        return app(GeneralSettings::class);
+        if (!self::isAvailable()) {
+            // Create instance with defaults when table doesn't exist
+            $settings = new GeneralSettings();
+            foreach (GeneralSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
+
+        try {
+            return app(GeneralSettings::class);
+        } catch (\Exception $e) {
+            // During migrations or when settings table doesn't exist yet
+            // Return a default instance
+            $settings = new GeneralSettings();
+            foreach (GeneralSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
     }
 
     /**
@@ -22,7 +54,26 @@ class SettingsHelper
      */
     public static function appearance(): AppearanceSettings
     {
-        return app(AppearanceSettings::class);
+        if (!self::isAvailable()) {
+            // Create instance with defaults when table doesn't exist
+            $settings = new AppearanceSettings();
+            foreach (AppearanceSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
+
+        try {
+            return app(AppearanceSettings::class);
+        } catch (\Exception $e) {
+            // During migrations or when settings table doesn't exist yet
+            // Return a default instance
+            $settings = new AppearanceSettings();
+            foreach (AppearanceSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
     }
 
     /**
@@ -30,7 +81,26 @@ class SettingsHelper
      */
     public static function localization(): LocalizationSettings
     {
-        return app(LocalizationSettings::class);
+        if (!self::isAvailable()) {
+            // Create instance with defaults when table doesn't exist
+            $settings = new LocalizationSettings();
+            foreach (LocalizationSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
+
+        try {
+            return app(LocalizationSettings::class);
+        } catch (\Exception $e) {
+            // During migrations or when settings table doesn't exist yet
+            // Return a default instance
+            $settings = new LocalizationSettings();
+            foreach (LocalizationSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
     }
 
     /**
@@ -38,7 +108,26 @@ class SettingsHelper
      */
     public static function backup(): BackupSettings
     {
-        return app(BackupSettings::class);
+        if (!self::isAvailable()) {
+            // Create instance with defaults when table doesn't exist
+            $settings = new BackupSettings();
+            foreach (BackupSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
+
+        try {
+            return app(BackupSettings::class);
+        } catch (\Exception $e) {
+            // During migrations or when settings table doesn't exist yet
+            // Return a default instance
+            $settings = new BackupSettings();
+            foreach (BackupSettings::defaults() as $key => $value) {
+                $settings->$key = $value;
+            }
+            return $settings;
+        }
     }
 
     /**

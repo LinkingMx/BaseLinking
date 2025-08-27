@@ -12,7 +12,11 @@
         "test:ui": "npx playwright test --ui",
         "test:backup-history": "npx playwright test backup-history.test.ts",
         "test:backup-history:headed": "npx playwright test backup-history.test.ts --headed",
-        "test:report": "npx playwright show-report"
+        "test:report": "npx playwright show-report",
+        "deploy:local": "php artisan app:deploy",
+        "deploy:production": "php artisan app:deploy --production",
+        "setup:local": "bash setup-local.sh",
+        "settings:setup": "php artisan migrate --path=database/settings"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
