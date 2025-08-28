@@ -12,6 +12,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. `app/Providers/Filament/AdminPanelProvider.php` - Línea comentada: `// ->registration()`
 2. `routes/auth.php` - Rutas de registro comentadas
+3. `resources/js/helpers/route-helper.ts` - Helper para manejar rutas deshabilitadas
+4. `resources/js/pages/welcome.tsx` - Condicional para mostrar botón de registro
+5. `resources/js/pages/auth/login.tsx` - Condicional para mostrar enlace de registro
+6. `resources/js/pages/auth/register.tsx` - Manejo de intento de registro deshabilitado
+
+**Solución JavaScript Implementada:**
+
+- Creado helper `safeRoute()` que verifica si una ruta existe antes de usarla
+- Función `isRouteEnabled()` para verificar disponibilidad de rutas
+- Los enlaces de registro se ocultan automáticamente cuando está deshabilitado
+- No hay errores JavaScript al intentar usar rutas deshabilitadas
 
 **Para HABILITAR registro nuevamente:**
 
@@ -19,6 +30,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     - Descomente la línea: `->registration()`
 2. En `routes/auth.php`:
     - Descomente las rutas de registro GET y POST
+3. Regenerar rutas de Ziggy: `php artisan ziggy:generate`
+4. Recompilar assets: `npm run build`
 
 **Razón del cambio:** Por seguridad, solo administradores deben crear usuarios nuevos.
 

@@ -7,7 +7,9 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isRouteEnabled, safeRoute } from '@/helpers/route-helper';
 import AuthLayout from '@/layouts/auth-layout';
+import { route } from 'ziggy-js';
 
 type RegisterForm = {
     name: string;
@@ -26,7 +28,16 @@ export default function Register() {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('register'), {
+
+        // Verificar si la ruta de registro está disponible
+        if (!isRouteEnabled('register')) {
+            console.error('Registration is disabled');
+            // Redirigir al login en lugar de intentar registrar
+            window.location.href = route('login');
+            return;
+        }
+
+        post(safeRoute('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
         });
     };
