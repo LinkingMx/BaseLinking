@@ -42,7 +42,8 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2rem')
             ->darkModeBrandLogo($appearanceSettings->dark_mode_logo ? asset('storage/'.$appearanceSettings->dark_mode_logo) : null)
             ->login()
-            ->registration()
+            // REGISTRO DESHABILITADO: Para habilitar registro nuevamente, descomente la siguiente línea:
+            // ->registration()
             ->passwordReset()
             ->emailVerification()
             ->colors(SettingsHelper::getFilamentColors())

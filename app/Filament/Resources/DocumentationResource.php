@@ -162,6 +162,23 @@ class DocumentationResource extends Resource
                 Tables\Filters\SelectFilter::make('created_by')
                     ->label('Creado por')
                     ->relationship('creator', 'name'),
+
+                Tables\Filters\Filter::make('own_documents')
+                    ->label('Solo mis documentos')
+                    ->query(fn (Builder $query) => $query->where('created_by', auth()->id()))
+                    ->toggle(),
+
+                Tables\Filters\Filter::make('approved_by_me')
+                    ->label('Aprobados por mí')
+                    ->query(fn (Builder $query) => $query->where('approved_by', auth()->id()))
+                    ->toggle()
+                    ->visible(fn () => auth()->user()->hasRole('IT_Boss')),
+
+                Tables\Filters\Filter::make('pending_my_approval')
+                    ->label('Pendientes de mi aprobación')
+                    ->query(fn (Builder $query) => $query->where('status', 'pending_supervisor'))
+                    ->toggle()
+                    ->visible(fn () => auth()->user()->hasRole('IT_Boss')),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -386,9 +403,27 @@ class DocumentationResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->with(['creator', 'approver'])
             ->latest('created_at');
+
+        $user = auth()->user();
+
+        // Filtrar usando la Policy directamente
+        if (!$user->hasRole('super_admin')) {
+            $query->where(function ($q) use ($user) {
+                // Documentos propios
+                $q->where('created_by', $user->id);
+                
+                // Si es IT_Boss, agregar documentos donde puede actuar
+                if ($user->hasRole('IT_Boss')) {
+                    $q->orWhere('status', 'pending_supervisor')
+                      ->orWhere('approved_by', $user->id);
+                }
+            });
+        }
+
+        return $query;
     }
 
     // Métodos de autorización para acciones bulk
@@ -465,6 +500,7 @@ class DocumentationResource extends Resource
             'approved_supervisor_pending_travel' => 'App\\States\\ApprovedSupervisorPendingTravelState',
             'approved_travel_pending_treasury' => 'App\\States\\ApprovedTravelPendingTreasuryState',
             'fully_approved' => 'App\\States\\FullyApprovedState',
+            'approved' => 'App\\States\\FullyApprovedState', // Agregado: mapeo para 'approved'
             'rejected' => 'App\\States\\RejectedState',
         ];
 

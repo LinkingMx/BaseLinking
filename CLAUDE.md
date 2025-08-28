@@ -2,6 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Configuraciones de Seguridad
+
+### Registro de Usuarios Deshabilitado
+
+**Estado Actual:** El registro de nuevos usuarios está DESHABILITADO por seguridad.
+
+**Archivos Modificados:**
+
+1. `app/Providers/Filament/AdminPanelProvider.php` - Línea comentada: `// ->registration()`
+2. `routes/auth.php` - Rutas de registro comentadas
+
+**Para HABILITAR registro nuevamente:**
+
+1. En `app/Providers/Filament/AdminPanelProvider.php`:
+    - Descomente la línea: `->registration()`
+2. En `routes/auth.php`:
+    - Descomente las rutas de registro GET y POST
+
+**Razón del cambio:** Por seguridad, solo administradores deben crear usuarios nuevos.
+
+---
+
 ## Development Commands
 
 ### Backend (Laravel/PHP)
@@ -48,171 +70,99 @@ php artisan migrate --path=database/settings --force
 
 - `npm run dev` - Start Vite development server
 - `npm run build` - Build for production
-- `npm run build:ssr` - Build with SSR support
-- `npm run lint` - Run ESLint with auto-fix
-- `npm run format` - Format code with Prettier
-- `npm run format:check` - Check formatting without changes
-- `npm run types` - Type check TypeScript without emitting
 
-### Single Test Execution
+## 📋 Sistema de Permisos Granulares para Documentation
 
-- `php artisan test --filter=TestName` - Run specific test class
-- `vendor/bin/pest tests/Feature/ExampleTest.php` - Run specific test file
+### 🎯 Funcionalidad Implementada
 
-### E2E Testing (Playwright)
+El sistema de documentación cuenta con un control de permisos granular que restringe el acceso basado en:
 
-- `npm run test:ui` - Run Playwright tests with UI mode
-- `npm run test:backup-history` - Run specific backup history tests
-- `npm run test:backup-history:headed` - Run backup history tests in headed mode
-- `npm run test:report` - Show Playwright test reports
-- `npx playwright test` - Run all Playwright tests
+#### 👥 Roles y Permisos
 
-## Architecture Overview
+**Creadores de Documentos (Users):**
 
-This is a Laravel + React SPA using Inertia.js with the following key architectural patterns:
+- Pueden crear nuevos documentos
+- Ven únicamente los documentos que ellos crearon
+- Pueden editar sus documentos mientras estén en borrador o rechazados
+- No pueden ver documentos de otros usuarios
 
-### Backend Structure
+**Autorizadores (IT_Boss):**
 
-- **Laravel 12** with standard MVC structure
-- **Inertia.js** for seamless SPA experience without API endpoints
-- **Filament v3.3** admin panel at `/admin` route with configurable appearance
-- **Spatie Laravel Settings** for dynamic configuration management
-- **Spatie Laravel Backup** with Google Drive integration
-- **Laravel Pulse** with Filament integration for real-time application monitoring
-- **Filament Menu Builder** for dynamic navigation management
-- **Filament Shield** for role-based permissions and access control
-- **Filament Breezy** for user profile management, 2FA, and API tokens
-- **Filament Logger** for comprehensive activity logging and audit trails
-- **Pest** for testing framework instead of PHPUnit
-- **SQLite** database for development
-- **Queue system** with database driver
+- Ven sus propios documentos creados
+- Ven documentos pendientes de su aprobación
+- **Ven documentos que ya aprobaron o rechazaron** (funcionalidad clave)
+- Pueden aprobar o rechazar documentos en estado pendiente
+- No pueden editar documentos, solo cambiar su estado
 
-### Frontend Structure
+**Super Administradores:**
 
-- **React 19** with TypeScript
-- **Inertia.js React adapter** for SPA routing
-- **Tailwind CSS v4** for styling
-- **Radix UI** components for accessible UI primitives
-- **Server-side rendering (SSR)** support via `resources/js/ssr.tsx`
+- Acceso completo a todos los documentos
+- Pueden realizar cualquier acción
 
-### Key Frontend Patterns
+#### 🔒 Restricciones de Edición
 
-- **Layout system**: Nested layouts in `resources/js/layouts/`
-    - `app-layout.tsx` - Main authenticated layout wrapper
-    - `auth-layout.tsx` - Authentication pages layout
-    - `settings/layout.tsx` - Settings section layout
-- **Component organization**:
-    - `components/ui/` - Reusable UI components (Radix-based)
-    - `components/` - App-specific components
-    - `hooks/` - Custom React hooks
-- **Appearance system**: Built-in dark/light mode via `use-appearance` hook
-- **Sidebar state**: Persisted via cookies and managed globally
+**Documentos Aprobados:**
 
-### Routing & Navigation
+- Son **INMUTABLES** - nadie puede editarlos una vez aprobados
+- Protege la integridad de documentos ya validados
+- Solo se pueden ver para consulta
 
-- Laravel routes in `routes/web.php`, `routes/auth.php`, `routes/settings.php`
-- Ziggy integration provides typed route helpers in React components
-- Inertia pages located in `resources/js/pages/`
+**Documentos en Borrador:**
 
-### State Management
+- Solo el creador puede editarlos
+- Pueden ser enviados para aprobación
 
-- Inertia shared data for global state (user, app name, sidebar state)
-- React hooks for component-level state
-- Cookie-based persistence for UI preferences
+**Documentos Pendientes:**
 
-### Authentication & Security
+- Solo el creador puede editarlos (antes de la aprobación)
+- Los autorizadores solo pueden aprobar/rechazar
 
-- Laravel Breeze-style authentication with Inertia
-- Email verification and password reset flows included
-- Auth pages use dedicated layout system
-- Separate Filament authentication for admin panel with registration and password reset enabled
-- **Filament Shield Integration**: Role-based permissions with super_admin role
-- **Filament Breezy Integration**: User profile management, 2FA, API token management
-- **Laravel Sanctum**: API authentication with personal access tokens
+**Documentos Rechazados:**
 
-### Settings Management Architecture
+- Solo el creador puede editarlos para hacer correcciones
+- Pueden ser reenviados para nueva aprobación
 
-- **Spatie Laravel Settings** for type-safe, database-stored configuration
-- **Settings Classes** in `app/Settings/`:
-    - `GeneralSettings` - App name, logo, contact info
-    - `AppearanceSettings` - Filament theme colors, fonts, logos
-    - `LocalizationSettings` - Language, timezone, date formats
-    - `BackupSettings` - Google Drive and backup configuration
-- **Dynamic Configuration**: Settings automatically applied to Filament panel on boot
-- **Helper Functions**: Global settings access via `settings()`, `app_name()`, etc.
+#### 🎯 Filtros Disponibles en la Interfaz
 
-### Email System Architecture
+**Para IT_Boss:**
 
-- **EmailConfiguration Resource** - Multiple SMTP/service configurations
-- **EmailTemplate Resource** - Configurable email templates with variable replacement
-- **Mailtrap Integration** - One-click configuration for testing
-- **Dynamic Email Configuration** - Automatically applies active configuration
-- **Service Support**: SMTP, Mailgun, Postmark, Amazon SES, Sendmail
+- "Aprobados por mí" - Ver documentos que ya aprobé
+- "Pendientes de mi aprobación" - Ver documentos esperando mi autorización
+- "Solo mis documentos" - Ver únicamente documentos que creé
 
-### Backup System Architecture
+**Para Usuarios:**
 
-- **Spatie Laravel Backup** with Google Drive integration
-- **BackupService** - Centralized backup operations and file management
-- **Google Drive Integration** - Service account authentication, automatic folder creation
-- **Backup Scheduling** - Configurable frequency with automatic cleanup
-- **Notification System** - Email and Slack notifications for backup events
-- **Filament Integration** - Complete backup management UI
+- "Solo mis documentos" - Ver únicamente documentos propios
 
-### System Monitoring & Logging Architecture
+#### 📊 Estados del Flujo de Aprobación
 
-- **Laravel Pulse Integration** for real-time application metrics
-- **Monitoring Widgets**: Server performance, cache hits/misses, queue status, exceptions, slow queries/requests
-- **Pulse Configuration**: Environment variables in `.env` for sampling rates and feature toggles
-- **Dual Access**: Filament-integrated dashboard at `/admin/system-monitoring` and native Pulse at `/pulse`
-- **Real-time Data**: Automatic collection of performance metrics with configurable retention
-- **Activity Logging**: Comprehensive audit trails via Filament Logger with Spatie Activity Log
-- **Log Types**: Resource operations, user access, notifications, model changes with color-coded categorization
+1. **Borrador** - Documento en creación
+2. **Pendiente de Aprobación** - Enviado para revisión del IT_Boss
+3. **Aprobado** - Validado y publicado (inmutable)
+4. **Rechazado** - Devuelto para correcciones
 
-### State Management & Workflow Architecture
+### 🎯 Beneficios del Sistema
 
-- **Spatie Laravel Model States** for type-safe state management
-- **Custom State Classes** in `app/States/` with defined transitions
-- **Dynamic State Transitions** via database configuration in `approval-states` and `state-transitions` resources
-- **HasStateTransitions Trait** for automatic Filament resource state actions
-- **State Transition Logging** with comprehensive audit trail
-- **Unified Workflow Events** system for state changes and model operations
-- **Advanced Workflow Engine** for complex business logic automation
-- **Model Variable Mapping** for dynamic template and notification systems
+## Important Implementation Notes
 
-### Documentation & Manual System Architecture
-
-- **Manual Categories** - Hierarchical organization of documentation sections
-- **Manual Resources** - File and resource management with categorization
-- **Manual Sections** - Content sections with rich text editing via TinyEditor
-- **Documentation Page** - Unified documentation interface within Filament admin
-- **Content Management** - Full CRUD operations with state management integration
-
-### Filament Admin Panel Navigation Structure
-
-- **"Gestión de Usuarios"**:
-    - User management resource (`/admin/users`)
-- **"Comunicaciones"**:
-    - Email configurations (`/admin/email-configurations`)
-    - Email templates (`/admin/email-templates`)
-- **"Documentación"**:
-    - Manual categories (`/admin/manual-categories`)
-    - Manual resources (`/admin/manual-resources`)
-    - Manual sections (`/admin/manual-sections`)
-    - Documentation page (`/admin/documentation-page`)
-- **"Configuración"**:
-    - General settings (`/admin/general-settings`)
-    - Appearance settings (`/admin/appearance-settings`)
-    - Localization settings (`/admin/localization-settings`)
-- **"Sistema & Backup"**:
-    - Backup configuration (`/admin/backup-configuration`)
-    - Backup manager (`/admin/backup-manager`)
-    - Backup history (`/admin/backup-history`)
-    - Activity logs (`/admin/activity-logs`)
-    - Exceptions (`/admin/exceptions`)
-- **"Shield"** (Auto-generated):
-    - Roles (`/admin/shield/roles`)
-- **User Menu** (Top-right avatar):
-    - My Profile (`/admin/my-profile`) - Filament Breezy integration
+- **Dual Interface Architecture**: This app has both a React SPA frontend (main user interface) and a Filament admin panel (administrative interface)
+- **SSR Support**: The app supports both CSR and SSR - build commands handle both modes
+- **Dynamic Configuration**: Settings from database automatically configure both frontend and Filament
+- **Component Aliasing**: Uses `@/` alias for `resources/js/` directory
+- **Ziggy Routes**: Route names are available as typed functions in React components
+- **Shared Data**: Global props (user, app name, settings) available via `usePage().props`
+- **Mobile-First**: Components include mobile navigation patterns
+- **Filament Structure**: Admin resources, pages, and widgets are auto-discovered in `app/Filament/` directory
+- **Settings Architecture**: Database-driven configuration with type safety and automatic application
+- **Backup System**: Complete enterprise-grade backup solution with cloud storage
+- **System Monitoring**: Real-time performance monitoring via Laravel Pulse with Filament integration
+- **Activity Logging**: All admin panel actions are automatically logged via Filament Logger
+- **Menu Management**: Dynamic navigation structure via Filament Menu Builder plugin
+- **User Profile Management**: Complete user profile system via Filament Breezy with 2FA and API tokens
+- **Role-Based Access**: Granular permissions system via Filament Shield
+- **Email Testing**: Easy Mailtrap integration for development and testing
+- **Email Templates**: Dynamic template system with variable replacement
+- **Localization**: Spanish as primary language (APP_LOCALE=es) with English fallback
 
 ## Important Implementation Notes
 

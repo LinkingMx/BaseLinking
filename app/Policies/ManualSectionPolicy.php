@@ -3,10 +3,10 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\EmailTemplate;
+use App\Models\ManualSection;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class EmailTemplatePolicy
+class ManualSectionPolicy
 {
     use HandlesAuthorization;
 
@@ -15,15 +15,15 @@ class EmailTemplatePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_email::template');
+        return $user->can('view_any_manual::section');
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, EmailTemplate $emailTemplate): bool
+    public function view(User $user, ManualSection $manualSection): bool
     {
-        return $user->can('view_email::template');
+        return $user->can('view_manual::section');
     }
 
     /**
@@ -31,23 +31,23 @@ class EmailTemplatePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_email::template');
+        return $user->can('create_manual::section');
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, EmailTemplate $emailTemplate): bool
+    public function update(User $user, ManualSection $manualSection): bool
     {
-        return $user->can('update_email::template');
+        return $user->can('update_manual::section');
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, EmailTemplate $emailTemplate): bool
+    public function delete(User $user, ManualSection $manualSection): bool
     {
-        return $user->can('delete_email::template');
+        return $user->can('delete_manual::section');
     }
 
     /**
@@ -55,15 +55,15 @@ class EmailTemplatePolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_email::template');
+        return $user->can('delete_any_manual::section');
     }
 
     /**
      * Determine whether the user can permanently delete.
      */
-    public function forceDelete(User $user, EmailTemplate $emailTemplate): bool
+    public function forceDelete(User $user, ManualSection $manualSection): bool
     {
-        return $user->can('force_delete_email::template');
+        return $user->can('force_delete_manual::section');
     }
 
     /**
@@ -71,15 +71,15 @@ class EmailTemplatePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_email::template');
+        return $user->can('force_delete_any_manual::section');
     }
 
     /**
      * Determine whether the user can restore.
      */
-    public function restore(User $user, EmailTemplate $emailTemplate): bool
+    public function restore(User $user, ManualSection $manualSection): bool
     {
-        return $user->can('restore_email::template');
+        return $user->can('restore_manual::section');
     }
 
     /**
@@ -87,15 +87,15 @@ class EmailTemplatePolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_email::template');
+        return $user->can('restore_any_manual::section');
     }
 
     /**
      * Determine whether the user can replicate.
      */
-    public function replicate(User $user, EmailTemplate $emailTemplate): bool
+    public function replicate(User $user, ManualSection $manualSection): bool
     {
-        return $user->can('replicate_email::template');
+        return $user->can('replicate_manual::section');
     }
 
     /**
@@ -103,6 +103,6 @@ class EmailTemplatePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_email::template');
+        return $user->can('reorder_manual::section');
     }
 }

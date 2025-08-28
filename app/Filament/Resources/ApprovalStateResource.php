@@ -275,6 +275,6 @@ class ApprovalStateResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('view_any_approval_state') ?? false;
+        return auth()->user()?->can('view_any_approval::state') ?? false;
     }
 }

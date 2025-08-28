@@ -152,6 +152,14 @@ class LocalizationSettings extends SettingsPage
     }
 
     /**
+     * Disable the default saved notification since we send a custom one
+     */
+    public function getSavedNotification(): ?Notification
+    {
+        return null;
+    }
+
+    /**
      * Apply localization settings immediately to the current application instance
      */
     protected function applySettingsImmediately(): void

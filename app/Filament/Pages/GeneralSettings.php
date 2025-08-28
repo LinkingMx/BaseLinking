@@ -103,4 +103,12 @@ class GeneralSettings extends SettingsPage
             ->success()
             ->send();
     }
+
+    /**
+     * Disable the default save notification
+     */
+    public function getSavedNotification(): ?Notification
+    {
+        return null;
+    }
 }

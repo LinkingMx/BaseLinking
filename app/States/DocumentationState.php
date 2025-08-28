@@ -25,6 +25,7 @@ abstract class DocumentationState extends State
             ->default(DraftState::class)
             // Flujo principal de aprobación
             ->allowTransition(DraftState::class, PendingSupervisorState::class)
+            ->allowTransition(PendingSupervisorState::class, FullyApprovedState::class) // ← AGREGADO: Transición directa a aprobado
             ->allowTransition(PendingSupervisorState::class, ApprovedSupervisorPendingTravelState::class)
             ->allowTransition(ApprovedSupervisorPendingTravelState::class, ApprovedTravelPendingTreasuryState::class)
             ->allowTransition(ApprovedTravelPendingTreasuryState::class, FullyApprovedState::class)

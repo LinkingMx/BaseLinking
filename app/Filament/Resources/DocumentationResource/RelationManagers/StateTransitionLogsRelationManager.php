@@ -25,22 +25,9 @@ class StateTransitionLogsRelationManager extends RelationManager
         // Solo lectura - no permitir edición de logs
         return $form
             ->schema([
-                Forms\Components\TextInput::make('user.name')
-                    ->label('Usuario')
-                    ->disabled(),
-
-                Forms\Components\TextInput::make('fromState.label')
-                    ->label('Estado Origen')
-                    ->disabled(),
-
-                Forms\Components\TextInput::make('toState.label')
-                    ->label('Estado Destino')
-                    ->disabled(),
-
-                Forms\Components\Textarea::make('comment')
+                Forms\Components\TextInput::make('comment')
                     ->label('Comentario')
-                    ->disabled()
-                    ->rows(3),
+                    ->disabled(),
 
                 Forms\Components\TextInput::make('created_at')
                     ->label('Fecha')
@@ -52,6 +39,7 @@ class StateTransitionLogsRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('description')
+            ->modifyQueryUsing(fn ($query) => $query->with(['user', 'fromState', 'toState']))
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha y Hora')
@@ -70,7 +58,8 @@ class StateTransitionLogsRelationManager extends RelationManager
                     ->label('Desde')
                     ->badge()
                     ->color(fn ($record) => $record->fromState?->color ?? 'gray')
-                    ->size('sm'),
+                    ->size('sm')
+                    ->placeholder('(Inicial)'),
 
                 Tables\Columns\TextColumn::make('toState.label')
                     ->label('Hacia')

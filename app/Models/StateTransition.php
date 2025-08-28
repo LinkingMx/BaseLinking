@@ -42,6 +42,7 @@ class StateTransition extends Model
         'restriction_applies_to_roles',
         'restriction_except_roles',
         'creator_field_name',
+        'model_type',
     ];
 
     /**
@@ -308,6 +309,14 @@ class StateTransition extends Model
         $creatorRule = $this->getCreatorRestrictionRule();
 
         return $creatorRule ? ($creatorRule['creator_field'] ?? 'created_by') : 'created_by';
+    }
+
+    /**
+     * Obtener el tipo de modelo desde el estado origen
+     */
+    public function getModelTypeAttribute(): ?string
+    {
+        return $this->fromState?->model_type;
     }
 
     /**

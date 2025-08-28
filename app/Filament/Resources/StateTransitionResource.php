@@ -5,10 +5,13 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\StateTransitionResource\Pages;
 use App\Models\StateTransition;
 use Filament\Forms;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Get;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class StateTransitionResource extends Resource
 {
@@ -32,19 +35,41 @@ class StateTransitionResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Información Básica')
                     ->schema([
-                        Forms\Components\Select::make('from_state_id')
-                            ->label('Estado Origen')
-                            ->relationship('fromState', 'label')
+                        Forms\Components\Select::make('model_type')
+                            ->label('Tipo de Modelo')
+                            ->options([
+                                'App\\Models\\Documentation' => 'Documentación',
+                                'App\\Models\\User' => 'Usuario',
+                                // Agregar más modelos según sea necesario
+                            ])
                             ->required()
-                            ->searchable()
-                            ->preload(),
+                            ->live()
+                            ->afterStateUpdated(function (Forms\Set $set) {
+                                // Limpiar estados cuando cambie el modelo
+                                $set('from_state_id', null);
+                                $set('to_state_id', null);
+                            })
+                            ->helperText('Selecciona el modelo para el cual aplica esta transición'),
 
-                        Forms\Components\Select::make('to_state_id')
-                            ->label('Estado Destino')
-                            ->relationship('toState', 'label')
-                            ->required()
-                            ->searchable()
-                            ->preload(),
+                        Select::make('from_state_id')
+                ->label('From State')
+                ->relationship(
+                    name: 'fromState', 
+                    titleAttribute: 'name',
+                    modifyQueryUsing: fn (Builder $query, Get $get) => 
+                        $query->where('model_type', $get('model_type'))
+                )
+                ->required(),
+            
+            Select::make('to_state_id')
+                ->label('To State')
+                ->relationship(
+                    name: 'toState', 
+                    titleAttribute: 'name',
+                    modifyQueryUsing: fn (Builder $query, Get $get) => 
+                        $query->where('model_type', $get('model_type'))
+                )
+                ->required(),
 
                         Forms\Components\TextInput::make('name')
                             ->label('Nombre')
@@ -211,6 +236,19 @@ class StateTransitionResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('model_type')
+                    ->label('Modelo')
+                    ->formatStateUsing(function ($state) {
+                        return match($state) {
+                            'App\\Models\\Documentation' => 'Documentación',
+                            'App\\Models\\User' => 'Usuario',
+                            default => class_basename($state ?? 'N/A')
+                        };
+                    })
+                    ->badge()
+                    ->color('info')
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('fromState.label')
                     ->label('Desde')
                     ->badge()
@@ -279,7 +317,23 @@ class StateTransitionResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['fromState', 'toState']))
             ->filters([
+                Tables\Filters\SelectFilter::make('model_type')
+                    ->label('Modelo')
+                    ->options([
+                        'App\\Models\\Documentation' => 'Documentación',
+                        'App\\Models\\User' => 'Usuario',
+                    ])
+                    ->query(function ($query, $data) {
+                        if ($data['value']) {
+                            return $query->whereHas('fromState', function ($q) use ($data) {
+                                $q->where('model_type', $data['value']);
+                            });
+                        }
+                        return $query;
+                    }),
+
                 Tables\Filters\SelectFilter::make('from_state_id')
                     ->label('Estado Origen')
                     ->relationship('fromState', 'label'),
@@ -329,6 +383,6 @@ class StateTransitionResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('view_any_state_transition') ?? false;
+        return auth()->user()?->can('view_any_state::transition') ?? false;
     }
 }

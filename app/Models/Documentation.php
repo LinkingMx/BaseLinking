@@ -87,6 +87,130 @@ class Documentation extends Model
                 $model->last_edited_at = now();
             }
         });
+
+        // Al crear, registrar log inicial
+        static::created(function ($model) {
+            if (auth()->check()) {
+                // Para la creación, no necesitamos state_transition_id ya que no es una transición real
+                // Vamos a omitir el log de creación por ahora para simplificar
+            }
+        });
+
+        // Al actualizar estado, registrar log de transición
+        static::updated(function ($model) {
+            if ($model->isDirty('status') && auth()->check()) {
+                // Sincronizar usando método dinámico
+                $model->syncStateWithStatus();
+                
+                $fromStateId = \App\Models\ApprovalState::where('name', $model->getOriginal('status'))->first()?->id;
+                $toStateId = \App\Models\ApprovalState::where('name', $model->status)->first()?->id;
+                
+                // Mapear transición basada en el cambio de estado
+                $transitionId = self::getTransitionId($model->getOriginal('status'), $model->status);
+                
+                if ($fromStateId && $toStateId && $transitionId) {
+                    \App\Models\StateTransitionLog::create([
+                        'model_type' => get_class($model),
+                        'model_id' => $model->id,
+                        'state_transition_id' => $transitionId,
+                        'from_state_id' => $fromStateId,
+                        'to_state_id' => $toStateId,
+                        'user_id' => auth()->id(),
+                        'comment' => self::getTransitionComment($model->getOriginal('status'), $model->status),
+                        'metadata' => [
+                            'ip' => request()->ip(),
+                            'user_agent' => request()->userAgent(),
+                        ],
+                    ]);
+                }
+            }
+        });
+    }
+
+    /**
+     * Genera comentarios automáticos para las transiciones
+     */
+    private static function getTransitionComment($fromState, $toState)
+    {
+        $transitions = [
+            'draft' => [
+                'pending_supervisor' => 'Documento enviado para aprobación',
+                'approved' => 'Documento aprobado directamente',
+            ],
+            'pending_supervisor' => [
+                'approved' => 'Documento aprobado por supervisor',
+                'rejected' => 'Documento rechazado por supervisor',
+                'draft' => 'Documento devuelto a borrador',
+            ],
+            'approved' => [
+                'draft' => 'Documento revertido a borrador',
+            ],
+            'rejected' => [
+                'draft' => 'Documento reactivado para edición',
+                'pending_supervisor' => 'Documento reenviado para aprobación',
+            ],
+        ];
+
+        return $transitions[$fromState][$toState] ?? "Estado cambiado de {$fromState} a {$toState}";
+    }
+
+    /**
+     * Sincroniza el campo state con el campo status dinámicamente
+     */
+    public function syncStateWithStatus(): void
+    {
+        // Buscar la clase de estado correspondiente al status actual
+        $stateClasses = [
+            \App\States\DraftState::class,
+            \App\States\PendingSupervisorState::class,
+            \App\States\ApprovedState::class,
+            \App\States\RejectedState::class,
+            \App\States\PublishedState::class,
+            \App\States\ArchivedState::class,
+        ];
+
+        foreach ($stateClasses as $stateClass) {
+            if (class_exists($stateClass)) {
+                try {
+                    $stateInstance = new $stateClass($this);
+                    if (method_exists($stateInstance, 'getStateName') && 
+                        $stateInstance->getStateName() === $this->status) {
+                        $this->state = $stateClass;
+                        $this->saveQuietly(); // Guardar sin disparar eventos
+                        break;
+                    }
+                } catch (\Exception $e) {
+                    // Ignorar estados que no puedan instanciarse
+                    continue;
+                }
+            }
+        }
+    }
+
+    /**
+     * Mapea los cambios de estado a IDs de transiciones
+     */
+    private static function getTransitionId($fromState, $toState)
+    {
+        $transitionMap = [
+            'draft' => [
+                'pending_supervisor' => 1, // submit_for_approval
+            ],
+            'pending_supervisor' => [
+                'approved' => 2, // approve
+                'rejected' => 3, // reject
+                'draft' => 4, // return_to_draft
+            ],
+            'approved' => [
+                'draft' => 4, // return_to_draft
+            ],
+            'rejected' => [
+                'draft' => 4, // return_to_draft
+                'pending_supervisor' => 1, // submit_for_approval
+            ],
+        ];
+
+        return $transitionMap[$fromState][$toState] ?? null;
     }
 
     /**

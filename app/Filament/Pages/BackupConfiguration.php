@@ -362,4 +362,12 @@ class BackupConfiguration extends SettingsPage
             ->success()
             ->send();
     }
+
+    /**
+     * Disable the default saved notification since we send a custom one
+     */
+    public function getSavedNotification(): ?Notification
+    {
+        return null;
+    }
 }

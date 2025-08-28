@@ -37,7 +37,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Build frontend assets (if needed)
+# Build frontend assets (if needed)cree
 if [ -f "package.json" ]; then
     echo "🎨 Compilando assets frontend..."
     npm ci --production
