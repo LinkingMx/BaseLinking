@@ -19,7 +19,7 @@ class EmailTemplateResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
 
-    protected static ?string $navigationGroup = 'Correo';
+    protected static ?string $navigationGroup = 'Automatización';
 
     // Templates de documentación disponibles
     protected static bool $shouldRegisterNavigation = true;

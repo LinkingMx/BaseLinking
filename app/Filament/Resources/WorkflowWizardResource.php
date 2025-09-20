@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class WorkflowWizardResource extends Resource
 {
@@ -124,12 +125,10 @@ class WorkflowWizardResource extends Resource
                                             $targetModel = $get('target_model');
                                             $automationType = $get('automation_type');
 
-                                            // Si hay un tipo de automatización seleccionado, mostrar eventos contextuales
                                             if ($automationType) {
                                                 return static::getContextualEventsForAutomationType($automationType, $targetModel);
                                             }
 
-                                            // Eventos genéricos si no hay modelo seleccionado
                                             if (! $targetModel) {
                                                 return [
                                                     'created' => 'Cuando se crea un registro',
@@ -138,7 +137,6 @@ class WorkflowWizardResource extends Resource
                                                 ];
                                             }
 
-                                            // Eventos específicos del modelo
                                             $events = static::getAvailableEventsForModel($targetModel);
                                             $friendlyEvents = [];
 
@@ -151,7 +149,7 @@ class WorkflowWizardResource extends Resource
                                         ->reactive()
                                         ->columns(1),
                                 ])
-                                ->visible(fn (callable $get) => $get('target_model')),
+                                ->visible(fn (callable $get) => $get('target_model')) ,
                         ]),
 
                     Forms\Components\Wizard\Step::make('¿A quién notificar?')
@@ -183,173 +181,118 @@ class WorkflowWizardResource extends Resource
                                         ->helperText('Ingresa las direcciones de email separadas por comas')
                                         ->placeholder('admin@empresa.com, soporte@empresa.com')
                                         ->visible(fn (callable $get) => in_array('custom', $get('notification_recipients') ?? [])),
-                                ]),
-                        ]),
+                            ]),
+                    ]),
 
-                    Forms\Components\Wizard\Step::make('Personaliza el mensaje')
-                        ->icon('heroicon-o-envelope')
-                        ->schema([
-                            Forms\Components\Section::make('Contenido del email')
-                                ->schema([
-                                    Forms\Components\TextInput::make('email_subject')
-                                        ->label('Asunto del email')
-                                        ->required()
-                                        ->helperText('Usa variables como {{nombre}}, {{app_name}}, etc.')
-                                        ->placeholder('¡Bienvenido {{nombre}} a {{app_name}}!'),
-
-                                    Forms\Components\Select::make('email_template_style')
-                                        ->label('Estilo del email')
-                                        ->options([
-                                            'simple' => 'Simple - Solo texto',
-                                            'modern' => 'Moderno - Con colores y botones',
-                                            'corporate' => 'Corporativo - Formal y profesional',
-                                            'friendly' => 'Amigable - Casual y cercano',
-                                        ])
-                                        ->default('modern')
-                                        ->reactive(),
-
-                                    Forms\Components\Textarea::make('email_content')
-                                        ->label('Mensaje del email')
-                                        ->required()
-                                        ->rows(8)
-                                        ->helperText('Escribe tu mensaje. Puedes usar variables como {{nombre}}, {{email}}, etc.')
-                                        ->placeholder("Hola {{nombre}},\n\n¡Te damos la bienvenida a {{app_name}}!\n\nGracias por unirte a nosotros.\n\nSaludos,\nEl equipo de {{app_name}}"),
-                                ]),
-
-                            Forms\Components\Section::make('Variables disponibles')
-                                ->description('Estas variables se reemplazarán automáticamente en el email')
-                                ->schema([
-                                    Forms\Components\Placeholder::make('available_variables')
-                                        ->label('')
-                                        ->content(function (callable $get) {
-                                            $targetModel = $get('target_model');
-                                            if (! $targetModel) {
-                                                return 'Selecciona un modelo para ver las variables disponibles';
+                Forms\Components\Wizard\Step::make('Selecciona el Mensaje')
+                    ->icon('heroicon-o-envelope')
+                    ->schema([
+                        Forms\Components\Section::make('Selecciona una plantilla de email')
+                            ->description('Elige la plantilla de email que se enviará cuando este workflow se active.')
+                            ->schema([
+                                Forms\Components\Select::make('existing_template_key')
+                                    ->label('Plantilla de Email')
+                                    ->options(function () {
+                                        return \App\Models\EmailTemplate::where('is_active', true)
+                                            ->pluck('name', 'key')
+                                            ->toArray();
+                                    })
+                                    ->searchable()
+                                    ->required()
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        if ($state) {
+                                            $template = \App\Models\EmailTemplate::where('key', $state)->first();
+                                            if ($template) {
+                                                $set('email_subject', $template->subject);
+                                                $originalContent = $template->metadata['original_content'] ?? strip_tags($template->content);
+                                                $set('email_content', $originalContent);
                                             }
+                                        }
+                                    })
+                                    ->helperText('Las plantillas se gestionan desde la sección "Templates de Email".')
+                                    ->placeholder('Selecciona una plantilla...'),
 
-                                            try {
-                                                $introspectionService = app(ModelIntrospectionService::class);
-                                                $modelInfo = $introspectionService->getModelInfo($targetModel);
-                                                $variables = $modelInfo['available_variables'] ?? [];
+                                Forms\Components\Placeholder::make('template_preview')
+                                    ->label('Vista previa de la plantilla')
+                                    ->content(function (callable $get) {
+                                        $templateKey = $get('existing_template_key');
+                                        if (!$templateKey) {
+                                            return 'Selecciona una plantilla para ver la vista previa.';
+                                        }
+                                        $template = \App\Models\EmailTemplate::where('key', $templateKey)->first();
+                                        if (!$template) {
+                                            return 'Plantilla no encontrada.';
+                                        }
+                                        $originalContent = $template->metadata['original_content'] ?? strip_tags($template->content);
+                                        
+                                        $name = htmlspecialchars($template->name);
+                                        $subject = htmlspecialchars($template->subject);
+                                        $limitedContent = htmlspecialchars(Str::limit($originalContent, 200));
 
-                                                if (empty($variables)) {
-                                                    return 'Variables básicas: {{app_name}}, {{created_at}}, {{updated_at}}';
-                                                }
+                                        return new \Illuminate\Support\HtmlString(<<<HTML
+                                            <div class='bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border'>
+                                                <h4 class='font-medium text-gray-900 dark:text-gray-100 mb-2'>{$name}</h4>
+                                                <p class='text-sm text-gray-600 dark:text-gray-400 mb-2'>
+                                                    <strong>Asunto:</strong> {$subject}
+                                                </p>
+                                                <div class='text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 p-3 rounded border'>
+                                                    {$limitedContent}
+                                                </div>
+                                            </div>
+                                        HTML);
+                                    })
+                                    ->reactive(),
+                            ]),
+                    ]),
 
-                                                $html = '<div class="grid grid-cols-2 gap-3">';
+                Forms\Components\Wizard\Step::make('Vista previa y configuración')
+                    ->icon('heroicon-o-eye')
+                    ->schema([
+                        Forms\Components\Section::make('Vista previa del email')
+                            ->schema([
+                                Forms\Components\Placeholder::make('email_preview')
+                                    ->label('')
+                                    ->content(function (callable $get) {
+                                        $subject = $get('email_subject') ?? 'Asunto del email';
+                                        $content = $get('email_content') ?? 'Contenido del email';
+                                        $previewSubject = str_replace(['{{nombre}}', '{{app_name}}', '{{email}}'], ['Juan Pérez', 'Mi Aplicación', 'juan@ejemplo.com'], $subject);
+                                        $previewContent = str_replace(['{{nombre}}', '{{app_name}}', '{{email}}'], ['Juan Pérez', 'Mi Aplicación', 'juan@ejemplo.com'], $content);
+                                        $bgColor = 'bg-gray-50';
+                                        $borderColor = 'border-gray-200';
+                                        $html = '<div class="'.$bgColor.' border '.$borderColor.' rounded-lg p-6">';
+                                        $html .= '<div class="mb-4"><div class="flex items-center gap-2 mb-2"><span class="font-semibold">Vista Previa del Email</span></div>';
+                                        $html .= '<div class="text-sm text-gray-600"><strong>Para:</strong> juan@ejemplo.com<br><strong>Asunto:</strong> '.htmlspecialchars($previewSubject).'</div></div>';
+                                        $html .= '<div class="bg-white border rounded p-4 shadow-sm"><div class="prose prose-sm max-w-none">'.nl2br(htmlspecialchars($previewContent)).'</div></div>';
+                                        $html .= '</div>';
+                                        return new \Illuminate\Support\HtmlString($html);
+                                    })
+                                    ->reactive(),
+                            ]),
 
-                                                foreach (array_slice($variables, 0, 8) as $variable) {
-                                                    $html .= '<div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">';
-                                                    $html .= '<div>';
-                                                    $html .= '<code class="text-xs font-mono text-primary-600">{{'.$variable['key'].'}}</code>';
-                                                    $html .= '<p class="text-xs text-gray-600 dark:text-gray-400">'.$variable['description'].'</p>';
-                                                    $html .= '</div>';
-                                                    $html .= '</div>';
-                                                }
-
-                                                $html .= '</div>';
-
-                                                if (count($variables) > 8) {
-                                                    $remaining = count($variables) - 8;
-                                                    $html .= '<p class="text-xs text-gray-500 mt-2">Y '.$remaining.' variables más disponibles...</p>';
-                                                }
-
-                                                return new \Illuminate\Support\HtmlString($html);
-
-                                            } catch (\Exception $e) {
-                                                return 'Error cargando variables del modelo';
-                                            }
-                                        })
-                                        ->reactive(),
-                                ])
-                                ->collapsible()
-                                ->collapsed(),
-                        ]),
-
-                    Forms\Components\Wizard\Step::make('Vista previa y configuración')
-                        ->icon('heroicon-o-eye')
-                        ->schema([
-                            Forms\Components\Section::make('Vista previa del email')
-                                ->schema([
-                                    Forms\Components\Placeholder::make('email_preview')
-                                        ->label('')
-                                        ->content(function (callable $get) {
-                                            $subject = $get('email_subject') ?? 'Asunto del email';
-                                            $content = $get('email_content') ?? 'Contenido del email';
-                                            $style = $get('email_template_style') ?? 'modern';
-
-                                            $previewSubject = str_replace(
-                                                ['{{nombre}}', '{{app_name}}', '{{email}}'],
-                                                ['Juan Pérez', 'Mi Aplicación', 'juan@ejemplo.com'],
-                                                $subject
-                                            );
-
-                                            $previewContent = str_replace(
-                                                ['{{nombre}}', '{{app_name}}', '{{email}}'],
-                                                ['Juan Pérez', 'Mi Aplicación', 'juan@ejemplo.com'],
-                                                $content
-                                            );
-
-                                            $bgColor = match ($style) {
-                                                'corporate' => 'bg-slate-50',
-                                                'friendly' => 'bg-yellow-50',
-                                                'modern' => 'bg-blue-50',
-                                                default => 'bg-gray-50'
-                                            };
-
-                                            $borderColor = match ($style) {
-                                                'corporate' => 'border-slate-200',
-                                                'friendly' => 'border-yellow-200',
-                                                'modern' => 'border-blue-200',
-                                                default => 'border-gray-200'
-                                            };
-
-                                            $html = '<div class="'.$bgColor.' border '.$borderColor.' rounded-lg p-6">';
-                                            $html .= '<div class="mb-4">';
-                                            $html .= '<div class="flex items-center gap-2 mb-2">';
-                                            $html .= '<span class="font-semibold">Vista Previa del Email</span>';
-                                            $html .= '</div>';
-                                            $html .= '<div class="text-sm text-gray-600">';
-                                            $html .= '<strong>Para:</strong> juan@ejemplo.com<br>';
-                                            $html .= '<strong>Asunto:</strong> '.htmlspecialchars($previewSubject);
-                                            $html .= '</div>';
-                                            $html .= '</div>';
-                                            $html .= '<div class="bg-white border rounded p-4 shadow-sm">';
-                                            $html .= '<div class="prose prose-sm max-w-none">';
-                                            $html .= nl2br(htmlspecialchars($previewContent));
-                                            $html .= '</div>';
-                                            $html .= '</div>';
-                                            $html .= '</div>';
-
-                                            return new \Illuminate\Support\HtmlString($html);
-                                        })
-                                        ->reactive(),
-                                ]),
-
-                            Forms\Components\Section::make('Configuración final')
-                                ->schema([
-                                    Forms\Components\Toggle::make('is_active')
-                                        ->label('Activar workflow inmediatamente')
-                                        ->helperText('Si está desactivado, podrás activarlo más tarde')
-                                        ->default(true)
-                                        ->inline(false),
-
-                                    Forms\Components\Textarea::make('description')
-                                        ->label('Notas (opcional)')
-                                        ->helperText('Describe qué hace este workflow para referencia futura')
-                                        ->rows(2),
-                                ]),
-                        ]),
-                ])
-                    ->columnSpanFull()
-                    ->persistStepInQueryString()
-                    ->submitAction(new \Illuminate\Support\HtmlString('
-                    <x-filament::button type="submit" size="lg" color="success">
-                        <x-heroicon-o-sparkles class="w-5 h-5 mr-2"/>
-                        Crear Workflow
-                    </x-filament::button>
-                ')),
-            ]);
+                        Forms\Components\Section::make('Configuración final')
+                            ->schema([
+                                Forms\Components\Toggle::make('is_active')
+                                    ->label('Activar workflow inmediatamente')
+                                    ->helperText('Si está desactivado, podrás activarlo más tarde')
+                                    ->default(true)
+                                    ->inline(false),
+                                Forms\Components\Textarea::make('description')
+                                    ->label('Notas (opcional)')
+                                    ->helperText('Describe qué hace este workflow para referencia futura')
+                                    ->rows(2),
+                            ]),
+                    ]),
+            ])
+                ->columnSpanFull()
+                ->persistStepInQueryString()
+                ->submitAction(new \Illuminate\Support\HtmlString(
+                '<x-filament::button type="submit" size="lg" color="success">
+                    <x-heroicon-o-sparkles class="w-5 h-5 mr-2"/>
+                    Crear Workflow
+                </x-filament::button>'
+            )),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -568,7 +511,8 @@ class WorkflowWizardResource extends Resource
     /**
      * Obtener nombre amigable para eventos específicos del modelo
      */
-    protected static function getFriendlyEventName(string $event, string $targetModel): string
+    protected static function getFriendlyEventName(string $event, string $targetModel):
+    string
     {
         $modelName = static::getModelFriendlyName($targetModel);
 

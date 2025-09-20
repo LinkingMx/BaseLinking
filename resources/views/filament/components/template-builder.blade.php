@@ -233,6 +233,77 @@ Vista Previa
                 </div>
             </div>
         </div>
+
+        @if($getCanSaveAsTemplate())
+        <!-- Save as Template Section -->
+        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-green-800 dark:text-green-200 flex items-center gap-2">
+                    <x-heroicon-o-bookmark class="w-5 h-5" />
+                    Guardar como Plantilla Reutilizable
+                </h3>
+                <button 
+                    type="button"
+                    @click="showSaveTemplate = !showSaveTemplate"
+                    class="text-sm px-3 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-700 transition-colors"
+                >
+                    <span x-text="showSaveTemplate ? 'Ocultar' : 'Mostrar'"></span>
+                </button>
+            </div>
+            
+            <div x-show="showSaveTemplate" x-transition class="space-y-4">
+                <p class="text-sm text-green-700 dark:text-green-300">
+                    ¿Te gusta como quedó este email? Guárdalo como plantilla para reutilizarlo en otros workflows.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                            Nombre de la plantilla
+                        </label>
+                        <input 
+                            type="text" 
+                            x-model="templateName"
+                            placeholder="ej: Bienvenida a nuevos usuarios"
+                            class="w-full px-3 py-2 border border-green-300 dark:border-green-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-green-900/50 dark:text-green-100 text-sm"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                            Clave única
+                        </label>
+                        <input 
+                            type="text" 
+                            x-model="templateKey"
+                            placeholder="ej: user_welcome"
+                            class="w-full px-3 py-2 border border-green-300 dark:border-green-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-green-900/50 dark:text-green-100 text-sm font-mono"
+                        />
+                        <p class="text-xs text-green-600 dark:text-green-400 mt-1">Solo letras, números y guiones bajos</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <x-heroicon-o-information-circle class="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <span class="text-xs text-green-600 dark:text-green-400">
+                            La plantilla incluirá el asunto, contenido y estilo actual
+                        </span>
+                    </div>
+                    
+                    <button 
+                        type="button"
+                        @click="saveAsTemplate"
+                        :disabled="!templateName || !templateKey || savingTemplate"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
+                    >
+                        <x-heroicon-o-bookmark class="w-4 h-4" />
+                        <span x-text="savingTemplate ? 'Guardando...' : 'Guardar Plantilla'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        @endif
         
         <!-- Hidden inputs for form integration -->
         <input type="hidden" :value="emailSubject" name="{{ $getName() }}_subject" />
@@ -249,6 +320,10 @@ Vista Previa
                 previewContent: '',
                 showVariablePicker: false,
                 previewDevice: 'desktop',
+                showSaveTemplate: false,
+                templateName: '',
+                templateKey: '',
+                savingTemplate: false,
                 
                 presets: @json($getTemplatePresets()),
                 
@@ -392,6 +467,75 @@ El equipo de {{app_name}}`;
                             
                         default:
                             return htmlContent;
+                    }
+                },
+
+                async saveAsTemplate() {
+                    if (!this.templateName || !this.templateKey) {
+                        return;
+                    }
+
+                    this.savingTemplate = true;
+
+                    try {
+                        // Validar clave única (solo letras, números y guiones bajos)
+                        if (!/^[a-zA-Z0-9_]+$/.test(this.templateKey)) {
+                            throw new Error('La clave solo puede contener letras, números y guiones bajos');
+                        }
+
+                        const templateData = {
+                            subject: this.emailSubject,
+                            content: this.emailContent,
+                            style: this.currentStyle
+                        };
+
+                        // Hacer la petición para guardar la plantilla
+                        const response = await fetch('{{ route("filament.admin.save-template") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                template_key: this.templateKey,
+                                template_name: this.templateName,
+                                template_data: templateData
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            // Mostrar notificación de éxito
+                            if (window.$wireui) {
+                                window.$wireui.notify({
+                                    title: 'Plantilla guardada',
+                                    description: `La plantilla "${this.templateName}" se ha guardado correctamente`,
+                                    icon: 'success'
+                                });
+                            }
+
+                            // Limpiar formulario
+                            this.templateName = '';
+                            this.templateKey = '';
+                            this.showSaveTemplate = false;
+                        } else {
+                            throw new Error(result.message || 'Error al guardar la plantilla');
+                        }
+
+                    } catch (error) {
+                        // Mostrar notificación de error
+                        if (window.$wireui) {
+                            window.$wireui.notify({
+                                title: 'Error',
+                                description: error.message,
+                                icon: 'error'
+                            });
+                        } else {
+                            alert('Error: ' + error.message);
+                        }
+                    } finally {
+                        this.savingTemplate = false;
                     }
                 }
             }))

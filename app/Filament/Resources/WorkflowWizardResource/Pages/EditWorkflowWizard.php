@@ -5,6 +5,7 @@ namespace App\Filament\Resources\WorkflowWizardResource\Pages;
 use App\Filament\Resources\WorkflowWizardResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Notifications\Notification;
 
 class EditWorkflowWizard extends EditRecord
 {
@@ -61,19 +62,141 @@ class EditWorkflowWizard extends EditRecord
         $firstStep = $this->record->stepDefinitions()->first();
         $firstTemplate = $firstStep?->templates()->first();
 
-        if ($firstTemplate) {
-            $data['email_subject'] = $firstTemplate->subject;
-            $data['email_content'] = strip_tags($firstTemplate->content); // Extraer texto del HTML
-            $data['email_template_style'] = $firstTemplate->template_config['style'] ?? 'modern';
-            $data['notification_recipients'] = $firstTemplate->template_config['recipients'] ?? [];
-            $data['custom_emails'] = $firstTemplate->template_config['custom_emails'] ?? [];
+        // PASO 1: Cargar datos básicos del workflow
+        $data['name'] = $this->record->name;
+        $data['description'] = $this->record->description;
+        $data['automation_type'] = 'notify_email';
+        
+        // PASO 2: Cargar configuración del disparador
+        $data['target_model'] = $this->record->target_model;
+        if ($firstStep) {
+            $conditions = $firstStep->conditions ?? [];
+            $data['trigger_event'] = $conditions['trigger_events'][0] ?? 'created';
         }
 
-        if ($firstStep) {
-            $conditions = $firstStep->conditions;
-            $data['trigger_event'] = $conditions['trigger_events'][0] ?? 'created';
+        // PASO 3: Cargar configuración de destinatarios
+        if ($firstTemplate) {
+            $recipientConfig = $firstTemplate->recipient_config ?? [];
+            $recipientType = $firstTemplate->recipient_type ?? 'creator';
+            
+            $recipients = [];
+            if ($recipientType === 'creator') $recipients[] = 'creator';
+            if ($recipientType === 'role') $recipients[] = 'admin';
+            if ($recipientType === 'dynamic') $recipients[] = 'assigned';
+            if ($recipientType === 'email' && !empty($recipientConfig['emails'])) {
+                $recipients[] = 'custom';
+            }
+            $data['notification_recipients'] = $recipients;
+            $data['custom_emails'] = $recipientConfig['emails'] ?? [];
+        }
+
+        // PASO 4: Cargar la plantilla de email seleccionada
+        if ($firstTemplate) {
+            $data['existing_template_key'] = $firstTemplate->email_template_key;
         }
 
         return $data;
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Actualizar datos básicos del workflow
+        $mutatedData = [
+            'name' => $data['name'] ?? $this->record->name,
+            'description' => $data['description'] ?? $this->record->description,
+            'target_model' => $data['target_model'] ?? $this->record->target_model,
+        ];
+
+        // Actualizar el step y template relacionados
+        $this->updateWorkflowStepAndTemplate($data);
+
+        return $mutatedData;
+    }
+
+    protected function updateWorkflowStepAndTemplate(array $data): void
+    {
+        $firstStep = $this->record->stepDefinitions()->first();
+        $firstTemplate = $firstStep?->templates()->first();
+
+        if (!$firstStep || !$firstTemplate) {
+            return;
+        }
+
+        // Actualizar condiciones del step
+        $firstStep->update([
+            'conditions' => [
+                'trigger_events' => [$data['trigger_event'] ?? 'created'],
+            ],
+        ]);
+
+        // Actualizar configuración de destinatarios
+        $recipientType = $this->determineRecipientType($data['notification_recipients'] ?? []);
+        $recipientConfig = $this->buildRecipientConfig($data);
+        
+        // Lógica simplificada: solo guardar la clave de la plantilla
+        $newTemplateKey = $data['existing_template_key'] ?? null;
+        $templateVars = ['source_template' => $newTemplateKey];
+
+        $firstTemplate->update([
+            'recipient_type' => $recipientType,
+            'recipient_config' => $recipientConfig,
+            'email_template_key' => $newTemplateKey,
+            'template_variables' => $templateVars,
+        ]);
+    }
+
+    protected function determineRecipientType(array $recipients): string
+    {
+        if (empty($recipients)) {
+            return 'creator';
+        }
+
+        // Si solo tiene 'creator', es tipo creator
+        if (count($recipients) === 1 && in_array('creator', $recipients)) {
+            return 'creator';
+        }
+
+        // Si solo tiene 'admin', es tipo admin
+        if (count($recipients) === 1 && in_array('admin', $recipients)) {
+            return 'admin';
+        }
+
+        // Si solo tiene 'assigned', es tipo assigned
+        if (count($recipients) === 1 && in_array('assigned', $recipients)) {
+            return 'assigned';
+        }
+
+        // Si solo tiene 'team', es tipo team
+        if (count($recipients) === 1 && in_array('team', $recipients)) {
+            return 'team';
+        }
+
+        // Si tiene múltiples tipos o incluye 'custom', es custom
+        return 'custom';
+    }
+
+    protected function buildRecipientConfig(array $data): array
+    {
+        return [
+            'recipients' => $data['notification_recipients'] ?? [],
+            'custom_emails' => $data['custom_emails'] ?? [],
+        ];
+    }
+
+    
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
+    protected function getSavedNotification(): ?Notification
+    {
+        return Notification::make()
+            ->success()
+            ->title('Workflow actualizado')
+            ->body('Los cambios en el workflow han sido guardados correctamente.')
+            ->icon('heroicon-o-pencil-square');
+    }
 }
+

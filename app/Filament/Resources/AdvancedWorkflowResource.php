@@ -26,7 +26,7 @@ class AdvancedWorkflowResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Workflows Avanzados';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
     {
